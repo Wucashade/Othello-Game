@@ -3,7 +3,19 @@
 #
 
 # Add source to this project's executable.
-add_executable (Othello-Game "Othello-Game.cpp" "Othello-Game.h")
+cmake_minimum_required(VERSION 3.0)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+
+find_package(SDL2 REQUIRED)
+
+include_directories(${SDL2_INCLUDE_DIRS})
+
+add_executable (Othello-Game "Othello-Game.cpp"   "Othello-Game.h")
+
+
+
+target_link_libraries(Othello-Game ${SDL2_LIBRARIES})
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET Othello-Game PROPERTY CXX_STANDARD 20)
