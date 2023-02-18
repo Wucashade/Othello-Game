@@ -1,8 +1,9 @@
 #include "Window.hpp"
 
+SDL_Renderer* Window::renderer = nullptr;
+
 
 using namespace std;
-const int WIDTH = 800, HEIGHT = 600;
 
 Window::Window()
 {
@@ -14,12 +15,20 @@ Window::~Window()
 
 };
 
-void Window::init(const char* title, int xsize, int ysize)
+void Window::init(const char* title, int positionX, int positionY)
 {
 
     SDL_Init(SDL_INIT_EVERYTHING);
 
-    window = SDL_CreateWindow(title, xsize, ysize, 400, 400, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow(title, positionX, positionY, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+    renderer = SDL_CreateRenderer(window, -1, 0);
+    if (renderer) 
+    {
+        
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        cout << "Renderer Created";
+           
+    }
 
     isRunning = true;
 
@@ -34,6 +43,7 @@ bool Window::running()
 void Window::clean()
 {
     SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);
     SDL_Quit();
 };
 
@@ -52,3 +62,16 @@ void Window::eventManager()
 
 
 };
+
+void Window::render() 
+{
+
+    SDL_SetRenderDrawColor(renderer, 122, 122, 122, 255);
+
+    SDL_RenderClear(renderer);
+
+
+    game->render();
+
+    SDL_RenderPresent(renderer);
+}
