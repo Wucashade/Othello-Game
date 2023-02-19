@@ -20,13 +20,17 @@ void Window::init(const char* title, int positionX, int positionY)
 
     SDL_Init(SDL_INIT_EVERYTHING);
 
-    window = SDL_CreateWindow(title, positionX, positionY, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+    window = SDL_CreateWindow(title, positionX, positionY, SCREEN_HEIGHT, SCREEN_WIDTH, SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(window, -1, 0);
     if (renderer) 
     {
         
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
         cout << "Renderer Created";
+
+        SDL_RenderClear(renderer);
+
+        SDL_RenderPresent(renderer);
            
     }
 
@@ -69,9 +73,5 @@ void Window::render()
     SDL_SetRenderDrawColor(renderer, 122, 122, 122, 255);
 
     SDL_RenderClear(renderer);
-
-
-    game->render();
-
     SDL_RenderPresent(renderer);
 }

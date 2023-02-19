@@ -2,7 +2,6 @@
 #include <SDL.h>
 #include <string>
 #include "define.hpp"
-#include "Game.hpp"
 
 
 class Window
@@ -26,7 +25,6 @@ private:
 
     bool isRunning;
     SDL_Window* window;
-    Game* game;
     
 
 };

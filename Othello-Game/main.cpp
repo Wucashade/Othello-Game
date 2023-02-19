@@ -20,6 +20,14 @@ int main(int argc, char* argv[])
     {
         window->eventManager();
 
+        SDL_Rect rect = {SCREEN_WIDTH/4, SCREEN_HEIGHT/4, SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
+
+        SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
+
+        SDL_RenderFillRect(window->renderer, &rect);
+
+        SDL_RenderPresent(window -> renderer);
+
     }
 
     window->clean();

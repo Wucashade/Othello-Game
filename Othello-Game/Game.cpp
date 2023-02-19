@@ -27,9 +27,4 @@ void Game::init()
 		}
 	}
 
-	void render();
-
-	void update();
-
-
 }
