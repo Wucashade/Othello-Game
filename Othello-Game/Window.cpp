@@ -111,10 +111,7 @@ void Window::render()
 {
 
     //Renders all the graphics
-
-    boardColour = BOARD_COLOUR;
-
-    SDL_SetRenderDrawColor(renderer, boardColour.r, boardColour.g, boardColour.b, boardColour.a);
+    SDL_SetRenderDrawColor(renderer, 211, 211, 211, 255);
 
     SDL_RenderClear(renderer);
 

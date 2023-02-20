@@ -24,6 +24,7 @@ void Board::init()
 
 
 	outlineColour = BLACK;
+	boxColour = BOARD_COLOUR;
 
 	boxWidth = Window::windowWidth / BOARD_BOXES_X;
 	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
@@ -46,6 +47,10 @@ void Board::renderBoard()
 		{
 			boardBuild.x = Game::boardTopLeftX + i * boxWidth;
 			boardBuild.y = Game::boardTopLeftY + j * boxHeight;
+			SDL_SetRenderDrawColor(Window::renderer, boxColour.r, boxColour.g, boxColour.b, boxColour.a);
+			SDL_RenderFillRect(Window::renderer, &boardBuild);
+
+			
 			SDL_SetRenderDrawColor(Window::renderer, outlineColour.r, outlineColour.g, outlineColour.b, outlineColour.a);
 			SDL_RenderDrawRect(Window::renderer, &boardBuild);
 		

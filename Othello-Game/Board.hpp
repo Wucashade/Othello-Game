@@ -20,6 +20,8 @@ public:
 	int getWidth();
 
 	SDL_Color outlineColour;
+	SDL_Color boxColour;
+
 
 
 

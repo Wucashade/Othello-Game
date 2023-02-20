@@ -26,7 +26,6 @@ public:
     static int windowHeight;
 
     static SDL_Renderer* renderer;
-    SDL_Color boardColour;
 
 private:
 
