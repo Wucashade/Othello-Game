@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <SDL.h>
 #include <string>
@@ -17,6 +19,8 @@ public:
     void update();
     void eventManager();
     void render();
+    void resize(int newWidth, int newHeight);
+    void calculateWindowDimensions();
 
     static int windowWidth;
     static int windowHeight;

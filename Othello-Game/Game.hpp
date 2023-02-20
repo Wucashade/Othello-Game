@@ -15,6 +15,7 @@ class Game
 		void init();
 		void render();
 		void update();
+		void resize();
 
 		static int boardTopLeftX;
 		static int boardTopLeftY;

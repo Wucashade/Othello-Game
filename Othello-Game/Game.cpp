@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "Window.hpp"
 
 
 int Game::boardTopLeftX;
@@ -36,4 +37,13 @@ void Game::render()
 void Game::update()
 {
 
+}
+
+void Game::resize() 
+{
+
+	board->resize();
+
+	boardTopLeftX = (Window::windowWidth - board->getWidth()) / 2;
+	boardTopLeftY = (Window::windowHeight - board->getHeight()) / 2;
 }

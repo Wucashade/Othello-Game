@@ -23,17 +23,16 @@ void Board::init()
 {
 
 
-	boardColour1 = BLACK;
-	boardColour2 = BOARD_COLOUR;
-	
+	outlineColour = BLACK;
 
 }
 
 void Board::renderBoard() 
 {
 
-	boxWidth = SCREEN_WIDTH / BOARD_BOXES_X;
-	boxHeight = SCREEN_HEIGHT / BOARD_BOXES_Y;
+
+	boxWidth = Window::windowWidth / BOARD_BOXES_X;
+	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
 
 	SDL_Rect boardBuild;
 	boardBuild.w = boxWidth;
@@ -43,10 +42,9 @@ void Board::renderBoard()
 	{
 		for (int j = 0; j < BOARD_BOXES_Y; j++) 
 		{
-			SDL_Color currentColor = (i + j) % 2 == 0 ? boardColour1 : boardColour1;
 			boardBuild.x = Game::boardTopLeftX + i * boxWidth;
 			boardBuild.y = Game::boardTopLeftY + j * boxHeight;
-			SDL_SetRenderDrawColor(Window::renderer, currentColor.r, currentColor.g, currentColor.b, currentColor.a);
+			SDL_SetRenderDrawColor(Window::renderer, outlineColour.r, outlineColour.g, outlineColour.b, outlineColour.a);
 			SDL_RenderDrawRect(Window::renderer, &boardBuild);
 		
 		}
@@ -66,3 +64,21 @@ void Board::update()
 {
 
 }
+
+void Board::resize() 
+{
+	boxWidth = Window::windowWidth / BOARD_BOXES_X;
+	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
+
+}
+
+int Board::getWidth() 
+{
+	return BOARD_BOXES_X * boxWidth;
+}
+
+int Board::getHeight() 
+{
+	return BOARD_BOXES_Y * boxHeight;
+}
+

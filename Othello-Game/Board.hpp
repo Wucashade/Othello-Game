@@ -15,9 +15,11 @@ public:
 	void renderBoard();
 	void render();
 	void update();
+	void resize();
+	int getHeight();
+	int getWidth();
 
-	SDL_Color boardColour1;
-	SDL_Color boardColour2;
+	SDL_Color outlineColour;
 
 
 
