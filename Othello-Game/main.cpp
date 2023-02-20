@@ -7,7 +7,7 @@
 #include <string>
 
 
-using namespace std;
+
 
 int main(int argc, char* argv[])
 {
@@ -19,15 +19,10 @@ int main(int argc, char* argv[])
     while (window->running())
     {
         window->eventManager();
+        window->update();
+        window->render();
 
-        SDL_Rect rect = {SCREEN_WIDTH/4, SCREEN_HEIGHT/4, SCREEN_WIDTH/2, SCREEN_HEIGHT/2};
-
-        SDL_SetRenderDrawColor(window->renderer, 255, 255, 255, 255);
-
-        SDL_RenderFillRect(window->renderer, &rect);
-
-        SDL_RenderPresent(window -> renderer);
-
+        
     }
 
     window->clean();

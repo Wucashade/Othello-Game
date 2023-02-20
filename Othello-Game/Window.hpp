@@ -2,6 +2,7 @@
 #include <SDL.h>
 #include <string>
 #include "define.hpp"
+#include "Game.hpp"
 
 
 class Window
@@ -13,6 +14,7 @@ public:
     void init(const char* title, int positionX, int positionY);
     bool running();
     void clean();
+    void update();
     void eventManager();
     void render();
 
@@ -20,11 +22,13 @@ public:
     static int windowHeight;
 
     static SDL_Renderer* renderer;
+    SDL_Color boardColour;
 
 private:
 
     bool isRunning;
     SDL_Window* window;
+    Game* game;
     
 
 };

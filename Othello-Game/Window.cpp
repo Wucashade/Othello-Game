@@ -18,24 +18,38 @@ Window::~Window()
 void Window::init(const char* title, int positionX, int positionY)
 {
 
-    SDL_Init(SDL_INIT_EVERYTHING);
+    // Initialises the window and renderer
 
-    window = SDL_CreateWindow(title, positionX, positionY, SCREEN_HEIGHT, SCREEN_WIDTH, SDL_WINDOW_RESIZABLE);
-    renderer = SDL_CreateRenderer(window, -1, 0);
-    if (renderer) 
-    {
-        
-        SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
-        cout << "Renderer Created";
+    if (SDL_Init(SDL_INIT_EVERYTHING) == 0) {
 
-        SDL_RenderClear(renderer);
+        cout << "Subsystems Initialised" << endl;
 
-        SDL_RenderPresent(renderer);
-           
+        window = SDL_CreateWindow(title, positionX, positionY, SCREEN_HEIGHT, SCREEN_WIDTH, SDL_WINDOW_RESIZABLE);
+
+        if (window) 
+        {
+            cout << "Window created" << endl;
+        }
+
+        renderer = SDL_CreateRenderer(window, -1, 0);
+        if (renderer)
+        {
+
+            SDL_SetRenderDrawColor(renderer, 0, 250, 154, 0);
+            cout << "Renderer Created" << endl;
+
+        }
+
+        isRunning = true;
+
+        game = new Game();
+        game->init();
     }
+    else 
+    {
+        isRunning = false;
 
-    isRunning = true;
-
+    }
 
 };
 
@@ -46,13 +60,22 @@ bool Window::running()
 
 void Window::clean()
 {
+
+    // Cleans the window after it is closed
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
 };
 
+void Window::update() 
+{
+    
+}
+
 void Window::eventManager()
 {
+
+    // Manages events that relate to SDL 
     SDL_Event windowEvent;
     if (SDL_PollEvent(&windowEvent))
     {
@@ -61,7 +84,13 @@ void Window::eventManager()
         case SDL_QUIT:
             isRunning = false;
             break;
+
+        default:
+            break;
+
+
         }
+
     }
 
 
@@ -70,8 +99,15 @@ void Window::eventManager()
 void Window::render() 
 {
 
-    SDL_SetRenderDrawColor(renderer, 122, 122, 122, 255);
+    //Renders all the graphics
+
+    boardColour = BOARD_COLOUR;
+
+    SDL_SetRenderDrawColor(renderer, boardColour.r, boardColour.g, boardColour.b, boardColour.a);
 
     SDL_RenderClear(renderer);
+
+    game->render();
+
     SDL_RenderPresent(renderer);
 }

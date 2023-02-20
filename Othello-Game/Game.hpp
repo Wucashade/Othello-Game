@@ -1,29 +1,29 @@
 #pragma once
 
-#include <SDL.h>
-#include <iostream>
-#include "Window.hpp"
 #include "define.hpp"
+#include <SDL.h>
+#include "Board.hpp"
 
-class Game
+class Game 
 {
 
-public:
-	Game();
-	~Game();
+	public:
 
-	void init();
-	void render();
-	void update();
+		Game();
+		~Game();
+
+		void init();
+		void render();
+		void update();
+
+		static int boardTopLeftX;
+		static int boardTopLeftY;
 
 
-
-
-private:
+	private:
 
 	
-	int boardWidth;
-	int boardHeight;
 
+		Board* board;
 
 };
