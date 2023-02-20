@@ -25,14 +25,16 @@ void Board::init()
 
 	outlineColour = BLACK;
 
+	boxWidth = Window::windowWidth / BOARD_BOXES_X;
+	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
+
 }
 
 void Board::renderBoard() 
 {
 
 
-	boxWidth = Window::windowWidth / BOARD_BOXES_X;
-	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
+	
 
 	SDL_Rect boardBuild;
 	boardBuild.w = boxWidth;
@@ -69,6 +71,15 @@ void Board::resize()
 {
 	boxWidth = Window::windowWidth / BOARD_BOXES_X;
 	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
+
+	if (boxWidth > boxHeight) {
+
+		boxWidth = boxHeight;
+	}
+	else 
+	{
+		boxHeight = boxWidth;
+	}
 
 }
 

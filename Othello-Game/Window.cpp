@@ -139,7 +139,7 @@ void Window::calculateWindowDimensions()
     auto Width = dimensions.w;
     auto Height = dimensions.h;
 
-    int squareWidth;
+    double squareWidth;
     if (Width > Height) 
     {
         squareWidth = .8 * Height;
