@@ -6,10 +6,6 @@
 
 
 
-
-
-
-
 Board::Board()
 {
 
@@ -123,7 +119,7 @@ int Board::getHeight()
 
 void Board::renderDisks() 
 {
-	
+	/*
 	for (int i = 0; i < BOARD_BOXES_X; i++) 
 	{
 		for (int j = 0; j < BOARD_BOXES_Y; j++) 
@@ -138,12 +134,13 @@ void Board::renderDisks()
 
 	}
 
-	
+	*/
 }
 
 void Board::renderDisk(int i, int j) 
 {
+	/*
 	uint8_t currentDisk = board[i][j];
 
-
+	*/
 }

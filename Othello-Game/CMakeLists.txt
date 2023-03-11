@@ -7,14 +7,20 @@ cmake_minimum_required(VERSION 3.0)
 
 set(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+find_library(SDL2_LIBRARY NAME SDL2)
+
 find_package(SDL2 REQUIRED)
 find_package(SDL2_image REQUIRED)
+
+message ([STATUS] "SDL2_INCLUDE_DIRS" ${SDL2_INCLUDE_DIR})
+message ([STATUS] "SDL2_LIBRARIES" ${SDL2_LIBRARY})
+message ([STATUS] "SDL2_IMAGE_INCLUDE_DIR" ${SDL2_IMAGE_INCLUDE_DIR})
 
 include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR})
 
 file(COPY "disctextures" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
-add_executable (Othello-Game "main.cpp" "Window.cpp" "Board.cpp" "Game.cpp" "Disk.cpp" "bitboards.cpp")
+add_executable (Othello-Game "main.cpp" "Window.cpp" "Board.cpp" "Game.cpp" "Disk.cpp")
 
 
 target_link_libraries(Othello-Game ${SDL2_LIBRARIES} SDL2_image::SDL2_image)
