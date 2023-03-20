@@ -9,6 +9,7 @@
 typedef uint64_t U64;
 #define GET_BIT(bb, square) (bb & (1ULL << square))
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
+#define CORNER_MASK 0x8100000000000081ULL
 //Credits to @chessprogramming591 teaching these macros. 
 //Link : https://www.youtube.com/watch?v=o-ySJ2EBarY&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs&index=2
 
@@ -224,6 +225,21 @@ void commitMove(U64 *bbOwn, U64 *bbOpponent, int col, int row)
     }
 }
 
+int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
+{
+
+    int ownCount, oppCount;
+    U64 ownCorners = bbOwn & CORNER_MASK;
+    U64 oppCorners = bbOpponent & CORNER_MASK;
+    int value = 0;
+
+    value = value + ((popCount(ownCorners) - popCount(oppCorners)) * 20);
+    value = value + ((popCount(ownMoves) - popCount(oppMoves)) * 5);
+
+    return value;
+
+}
+
 int main()
 {
 
@@ -265,6 +281,10 @@ int main()
     cout << "BLACK: "<<cnt << endl;
     cnt = popCount(bitboardWhite);
     cout << "WHITE: "<<cnt << endl;
+
+    cout << evaluateMove(bitboardWhite, bitboardBlack, generateMoves(bitboardWhite, bitboardBlack), generateMoves(bitboardBlack, bitboardWhite)) << endl;
+    cout << evaluateMove(bitboardBlack, bitboardWhite, generateMoves(bitboardBlack, bitboardWhite), generateMoves(bitboardWhite, bitboardBlack)) << endl;
+
 
     return 0;
 
