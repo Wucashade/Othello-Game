@@ -9,27 +9,15 @@
 typedef uint64_t U64;
 #define GET_BIT(bb, square) (bb & (1ULL << square))
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
+//Credits to @chessprogramming591 teaching these macros. 
+//Link : https://www.youtube.com/watch?v=o-ySJ2EBarY&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs&index=2
 
 using namespace std;
 
 
 U64 bitboardWhite = 0ULL;
 U64 bitboardBlack = 0ULL;
-U64 emptyBB;
-U64 occupiedBB;
-/*
-//Board representation as an enum
-enum squares {
-  a1, b1, c1, d1, e1, f1, g1, h1,
-  a2, b2, c2, d2, e2, f2, g2, h2,
-  a3, b3, c3, d3, e3, f3, g3, h3,
-  a4, b4, c4, d4, e4, f4, g4, h4,
-  a5, b5, c5, d5, e5, f5, g5, h5,
-  a6, b6, c6, d6, e6, f6, g6, h6,
-  a7, b7, c7, d7, e7, f7, g7, h7,
-  a8, b8, c8, d8, e8, f8, g8, h8
-};
-*/
+
 enum squares {
   h8, g8, f8, e8, d8, c8, b8, a8,
   h7, g7, f7, e7, d7, c7, b7, a7,
@@ -41,12 +29,10 @@ enum squares {
   h1, g1, f1, e1, d1, c1, b1, a1
 };
 
-enum colours{DISKWHITE, DISKBLACK, DISKEMPTY};
-
 /*
     Masks to ignore moves that go out of bitboard bounds
+    Source for masks: https://www.chessprogramming.org/General_Setwise_Operations#Shifting_Bitboards
 */
-
 U64 avoidWrap[8] =
 {
    0xfefefefefefefe00, //UP-LEFT
@@ -71,13 +57,19 @@ int shift[8] = {9, 1,-7,-8,-9,-1, 7, 8};
    -7    -8   -9
 */
 
+/*
+The function shiftOne shifts the bit in the 8 different directions 
+that are shown above. 
+*/
+
 U64 shiftOne (U64 bb, int dir8) {
-    if(dir8 < 0 || dir8 > 7)
+    if(dir8 < 0 || dir8 > 7)        // Check to make sure that the direction exists in the array
     {
         cout << "Invalid direction" << endl;
     }
-    int r = shift[dir8]; // {+-1,7,8,9}
-    return (r > 0) ? ((bb << r)&avoidWrap[dir8]):((bb >> -r)&avoidWrap[dir8]);
+    int a = shift[dir8]; 
+    return (a > 0) ? ((bb << a)&avoidWrap[dir8]):((bb >> -a)&avoidWrap[dir8]); 
+    //Shifts left if the value is positive and right if negative, also applies mask so that the bits don't wrap around to the other side of the bitboard if theyre at the end
 
 }
 
@@ -86,53 +78,55 @@ U64 shiftOne (U64 bb, int dir8) {
 
 void printBitboard(U64 bbOne, U64 bbTwo)
 {
-    char whiteSquare[] = "W";
-    for (int i = 7; i > -1; i--)
+    if(bbOne == bitboardWhite)
     {
-        cout << 8-i << "  ";
-        for(int j = 7; j > -1; j--)
+        for (int i = 7; i > -1; i--)
         {
-            int square = i * 8 + j;
-            cout << (GET_BIT(bbOne, square) ? "W":(GET_BIT(bbTwo, square) ? "B":"0")) << " ";
-            /*
-            //cout << ( GET_BIT(bb, square) ? 1:0 )<< " ";
-            
-            if((bbOne & (1ULL << square)) == 1)
+            cout << 8-i << "  ";    // Prints the rank
+            for(int j = 7; j > -1; j--)
             {
-                cout << "W ";
-                
-            }
-            
-            else if (GET_BIT(bbTwo, square) == 1)
-            {
-                cout << "B ";
-            }
-            else
-            {
-                cout << "0 ";
-            }
+                int square = i * 8 + j;
+                cout << (GET_BIT(bbOne, square) ? "W":(GET_BIT(bbTwo, square) ? "B":"0")) << " ";
+                // Checks the first bitboard if there is a bit, then the second bitboard and prints appropriate letters
+                //If neither bitboards have a bit in that space then it prints a "0"
 
-            */
-        }
+            }
         cout << "" << endl;
+        }
+        cout << endl << "   a b c d e f g h" << endl;   // Prints the file
     }
-    cout << endl << "   a b c d e f g h" << endl;
+    else{
+        for (int i = 7; i > -1; i--)
+        {
+            cout << 8-i << "  ";    // Prints the rank
+            for(int j = 7; j > -1; j--)
+            {
+                int square = i * 8 + j;
+                cout << (GET_BIT(bbOne, square) ? "B":(GET_BIT(bbTwo, square) ? "W":"0")) << " ";
+                // Checks the first bitboard if there is a bit, then the second bitboard and prints appropriate letters
+                //If neither bitboards have a bit in that space then it prints a "0"
+
+            }
+            cout << "" << endl;
+        }
+        cout << endl << "   a b c d e f g h" << endl;   // Prints the file
+    }
 }
 
 void printSingleBitboard(U64 bb)
 {
     for (int i = 7; i > -1; i--)
     {
-        cout << 8-i << "  ";
+        cout << 8-i << "  ";    // Prints the rank
         for(int j = 7; j > -1; j--)
         {
             int square = i * 8 + j;
-            cout << ( GET_BIT(bb, square) ? 1:0 )<< " ";
+            cout << ( GET_BIT(bb, square) ? 1:0 )<< " ";    //Prints either a 1 or 0 for square
 
         }
         cout << "" << endl;
     }
-    cout << endl << "   a b c d e f g h" << endl;
+    cout << endl << "   a b c d e f g h" << endl;   // Prints the file
 }
 
 int popCount(U64 bb)
@@ -140,7 +134,7 @@ int popCount(U64 bb)
     int count = 0;
     if (bb == 0)  
     {
-        return count;
+        return count;   //Won't waste time reading if bitboard is empty
     }
     else
     {
@@ -155,7 +149,7 @@ int popCount(U64 bb)
 
 U64 generateMoves(U64 bbOwn, U64 bbOpponent)
 {
-    emptyBB = ~(bbOwn | bbOpponent);
+    U64 emptyBB = ~(bbOwn | bbOpponent);
     U64 moves;
     U64 legalMoves = 0;
 
@@ -173,20 +167,98 @@ U64 generateMoves(U64 bbOwn, U64 bbOpponent)
         legalMoves |= shiftOne(moves, i) & emptyBB;
 
     }
+
+
     return legalMoves;
 
+}
+
+bool isValid(U64 bb, int col, int row)
+{
+    U64 checkedBit = 1ULL << (row * 8 + col );
+    if(bb == bitboardWhite)
+    {
+        return (generateMoves(bitboardWhite, bitboardBlack) &  checkedBit) != 0;
+    }
+    else
+    {
+        return (generateMoves(bitboardBlack, bitboardWhite) &  checkedBit) != 0;
+    }
+
+
+}
+
+void commitMove(U64 *bbOwn, U64 *bbOpponent, int col, int row)
+{
+
+    U64 moves, disk;
+    U64 newDisk = 1ULL << (row * 8 + col);
+    U64 capturedDisks = 0;
+
+    
+    if (isValid(*bbOwn, col, row) == 0)
+    {
+        cout << "Invalid Move" << endl;
+    }
+    else
+    {
+        *bbOwn |= newDisk;
+
+        for(int i = 0; i < 8; i++)
+        {
+
+            moves = shiftOne(newDisk, i) & *bbOpponent;
+
+            moves |= shiftOne(moves, i) & *bbOpponent;
+            moves |= shiftOne(moves, i) & *bbOpponent;
+            moves |= shiftOne(moves, i) & *bbOpponent;
+            moves |= shiftOne(moves, i) & *bbOpponent;
+            moves |= shiftOne(moves, i) & *bbOpponent;
+
+            disk = shiftOne(moves, i) & *bbOwn;
+            capturedDisks |= (disk ? moves : 0);
+        }
+
+        *bbOwn ^= capturedDisks;
+        *bbOpponent ^= capturedDisks;
+    }
 }
 
 int main()
 {
 
+
     int cnt = 0;
+
     SET_BIT(bitboardWhite, d4);
     SET_BIT(bitboardWhite, e5);
     SET_BIT(bitboardBlack, e4);
     SET_BIT(bitboardBlack, d5);
-    SET_BIT(bitboardWhite, c4);
+    SET_BIT(bitboardWhite, f5);
+    /*
+    cout << bitboardWhite<<endl;
     
+    printBitboard(bitboardWhite, bitboardBlack);
+    printSingleBitboard(bitboardBlack);
+    printSingleBitboard(bitboardWhite);
+
+    cnt = popCount(bitboardBlack);
+    cout << "BLACK: "<<cnt << endl;
+    cnt = popCount(bitboardWhite);
+    cout << "WHITE: "<<cnt << endl;
+
+*/
+
+    printBitboard(bitboardWhite, bitboardBlack);
+    
+    printSingleBitboard(generateMoves(bitboardWhite, bitboardBlack));
+
+    commitMove(&bitboardWhite, &bitboardBlack, 4, 2);
+
+    printSingleBitboard(generateMoves(bitboardBlack, bitboardWhite));
+
+    commitMove(&bitboardBlack, &bitboardWhite, 5, 2);
+
     printBitboard(bitboardWhite, bitboardBlack);
 
     cnt = popCount(bitboardBlack);
@@ -194,10 +266,6 @@ int main()
     cnt = popCount(bitboardWhite);
     cout << "WHITE: "<<cnt << endl;
 
-
-    printSingleBitboard(generateMoves(bitboardBlack, bitboardWhite));
-
-    
     return 0;
 
 
