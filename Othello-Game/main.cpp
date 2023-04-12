@@ -21,8 +21,6 @@ int main(int argc, char* argv[])
         window->eventManager();
         window->update();
         window->render();
-
-        
     }
 
     window->clean();

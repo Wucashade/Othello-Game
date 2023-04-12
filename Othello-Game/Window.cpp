@@ -95,6 +95,9 @@ void Window::eventManager()
             {
                 resize(windowEvent.window.data1, windowEvent.window.data2);
             }
+        case SDL_MOUSEBUTTONDOWN:
+            game -> handleMouseButtonDown(windowEvent.button);
+		break;
 
         default:
             break;

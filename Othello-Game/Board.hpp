@@ -1,8 +1,11 @@
 #pragma once
 
 #include <SDL.h>
+#include <SDL_image.h>
 #include <iostream>
 #include "define.hpp"
+
+typedef uint64_t U64;
 
 class Board
 {
@@ -18,33 +21,30 @@ public:
 	void resize();
 	int getHeight();
 	int getWidth();
-	void renderDisks();
-	void renderDisk(int i, int j);
+	U64 getBitboard(U64 bb);
+	void renderDisks(U64 bbOne, U64 bbTwo);
+	void drawImage(const string& imagePath, int x, int y);
+	U64 shiftOne(U64 bb, int dir8);
+	int popCount(U64 bb);
+	U64 generateMoves(U64 bbOwn, U64 bbOpponent);
+	bool isValid(U64 bb, int index);
+	void commitMove(U64 *bbOwn, U64 *bbOpponent, int index);
+	void handleMouseButtonDown(SDL_MouseButtonEvent& b, U64 bbOwn, U64 bbOpponent);
+	void printSingleBitboard(U64 bb);
+	void printBitboard(U64 bbOwn, U64 bbOpponent);
+	
+	
 
 	SDL_Color outlineColour;
 	SDL_Color boxColour;
 
-	/*
-	  Square numbering:
+	U64 bitboardWhite;
+	U64 bitboardBlack;
 
-	  63 62 61 60 59 58 57 56
-	  55 54 53 52 51 50 49 48
-	  47 46 45 44 43 42 41 40
-	  39 38 37 36 35 34 33 32
-	  31 30 29 28 27 26 25 24
-	  23 22 21 20 19 18 17 16
-	  15 14 13 12 11 10  9  8
-	   7  6  5  4  3  2  1  0
-	*/
-
-
-
-
+	
 
 private:
 
-
-	
 	int boxWidth;
 	int boxHeight;
 

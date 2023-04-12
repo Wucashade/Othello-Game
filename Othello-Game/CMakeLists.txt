@@ -20,7 +20,7 @@ include_directories(${SDL2_INCLUDE_DIRS} ${SDL2_IMAGE_INCLUDE_DIR})
 
 file(COPY "disctextures" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
-add_executable (Othello-Game "main.cpp" "Window.cpp" "Board.cpp" "Game.cpp" "Disk.cpp")
+add_executable (Othello-Game "main.cpp" "Window.cpp" "Board.cpp" "Game.cpp" "Player.cpp")
 
 
 target_link_libraries(Othello-Game ${SDL2_LIBRARIES} SDL2_image::SDL2_image)
