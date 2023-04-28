@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Board.hpp"
+#pragma once
 
 typedef uint64_t U64;
 
@@ -13,13 +13,16 @@ class Player
         U64 getBitboard();
         int getScore();
         bool isPlayerHuman();
-        
+        void setBitboard();
 
+        U64 pieceColour;
 
     private:
 
-        U64 pieceColour;
+        
         int score;
         bool isHuman;
+
+        
 
 };

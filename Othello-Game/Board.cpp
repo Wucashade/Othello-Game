@@ -1,14 +1,26 @@
 #include "Board.hpp"
-#include "Game.hpp"
 #include "Window.hpp"
-
-
 
 #define GET_BIT(bb, square) (bb & (1ULL << square))
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
 
-U64 bitboardWhite = 0ULL;
-U64 bitboardBlack = 0ULL;
+
+#define CORNER_MASK 0x8100000000000081ULL
+
+
+
+Board::Board()
+{
+    bool moveMade;
+    U64 bitboardWhite = 0ULL;
+    U64 bitboardBlack = 0ULL;
+
+};
+
+Board::~Board()
+{
+
+};
 
 enum squares
 {
@@ -36,30 +48,31 @@ U64 avoidWrap[8] =
 
 int shift[8] = {9, 1, -7, -8, -9, -1, 7, 8};
 
-
-
-Board::Board()
+enum state
 {
-
+    WHITE_MOVE,
+    BLACK_MOVE,
+    GAME_OVER
 };
 
-Board::~Board()
-{
+state s;
 
-};
 
 void Board::init()
 {
-	SET_BIT(bitboardWhite, d4);
-	SET_BIT(bitboardWhite, e5);
+	
 	SET_BIT(bitboardBlack, d5);
 	SET_BIT(bitboardBlack, e4);
-
+	SET_BIT(bitboardWhite, d4);
+	SET_BIT(bitboardWhite, e5);
 	outlineColour = BLACK;
 	boxColour = BOARD_COLOUR;
 
+    s = BLACK_MOVE;
+
 	boxWidth = Window::windowWidth / BOARD_BOXES_X;
 	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
+
 }
 
 void Board::renderBoard() 
@@ -86,10 +99,10 @@ void Board::renderBoard()
 	}
 }
 
-void Board::render() 
+void Board::render(U64 bbOne, U64 bbTwo) 
 {
 	renderBoard();
-	renderDisks(bitboardWhite, bitboardBlack);
+	renderDisks(bbOne, bbTwo);
 
 }
 
@@ -128,22 +141,22 @@ int Board::getHeight()
 void Board::renderDisks(U64 bbOne, U64 bbTwo) 
 {
 
-	for (int i = 0; i < BOARD_BOXES_X; ++i) 
+	for (int i = 0; i < BOARD_BOXES_X; i++) 
 		{
-			for (int j = 0; j < BOARD_BOXES_Y; ++j) 
+			for (int j = 0; j < BOARD_BOXES_Y; j++) 
 			{
 				int square = i * 8 + j;
 				if(GET_BIT(bbOne, square))
 				{
-					drawImage("disctextures/whitedisc.png", i, j);
+					drawImage("disctextures/blackdisc.png", i, j);
 				}
 				else if (GET_BIT(bbTwo, square))
 				{
-					drawImage("disctextures/blackdisc.png", i, j);
+					drawImage("disctextures/whitedisc.png", i, j);
 				}
-				
 			}
 		}
+       
 }
 
 void Board::drawImage(const string& imagePath, int x, int y)
@@ -179,7 +192,7 @@ void Board::drawImage(const string& imagePath, int x, int y)
 
 U64 Board::shiftOne(U64 bb, int dir8)
 {
-    if (dir8 < 0 || dir8 > 7) // Check to make sure that the direction exists in the array
+    if (dir8 < 0 || dir8 > 7) // Check to make sure that the direction exists in the array§
     {
         cout << "Invalid direction" << endl;
     }
@@ -229,17 +242,10 @@ U64 Board::generateMoves(U64 bbOwn, U64 bbOpponent)
     return legalMoves;
 }
 
-bool Board::isValid(U64 bb, int index)
+bool Board::isValid(U64 bbOwn, U64 bbOpponent, int index)
 {
     U64 checkedBit = 1ULL << index;
-    if (bb == bitboardWhite)
-    {
-        return (generateMoves(bitboardWhite, bitboardBlack) & checkedBit) != 0;
-    }
-    else
-    {
-        return (generateMoves(bitboardBlack, bitboardWhite) & checkedBit) != 0;
-    }
+    return (generateMoves(bbOwn, bbOpponent) & checkedBit) != 0;
 }
 
 void  Board::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
@@ -249,7 +255,7 @@ void  Board::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
     U64 newDisk = 1ULL << index;
     U64 capturedDisks = 0;
 
-    if (isValid(*bbOwn, index) == 0)
+    if (isValid(*bbOwn, *bbOpponent, index) == 0)
     {
         cout << "Invalid Move" << endl;
     }
@@ -277,24 +283,71 @@ void  Board::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
     }
 }
 
-void Board::handleMouseButtonDown(SDL_MouseButtonEvent& b, U64 bbOwn, U64 bbOpponent)
+bool Board::handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* playerOne, Player* playerTwo)
 {
-	int x, y, boardX, boardY;
-	SDL_GetMouseState(&x, &y);
-	cout << "hi" << endl;
-	printSingleBitboard(bbOwn);
-	printSingleBitboard(bbOpponent);
+    if(b.button == SDL_BUTTON_LEFT)
+    {
+        int x, y, boardX, boardY;
+	    SDL_GetMouseState(&x, &y);
 
+        boardX = (x - Game::boardTopLeftX) / boxWidth;
+        boardY = (y - Game::boardTopLeftY) / boxHeight;
+        int index = boardX * 8 + boardY;
+        cout << "board clicked at X: " << boardX << " Y: " << boardY<<endl;
+        if(isValid(playerOne->pieceColour, playerTwo->pieceColour, index) == 1)
+        {
+            commitMove(&playerOne->pieceColour, &playerTwo->pieceColour, index);
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }  
+    }
+    else
+    {
+        return 0;
+    }
+}
+void Board::placeDisk(Player* playerOne, Player* playerTwo, int index)
+{
+    if(s == BLACK_MOVE && isValid(playerOne->pieceColour, 
+                        playerTwo->pieceColour, index) != 0)
+    {
 
-	boardX = (x - Game::boardTopLeftX) / boxWidth;
-	boardY = (y - Game::boardTopLeftY) / boxHeight;
-	int index = boardX * 8 + boardY;
+        commitMove(&playerOne->pieceColour, &playerTwo->pieceColour, index);
+        s = WHITE_MOVE;
 
-	if(isValid(bbOwn, index))
-	{
-		commitMove(&bbOwn, &bbOpponent, index);
-	}
+    }
+    if (generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0 && 
+        generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
+    {
+        s = GAME_OVER;
+        cout << "GAME OVER" << endl;
+        if (popCount(playerOne->pieceColour) > popCount(playerTwo->pieceColour))
+        {
+            cout << "BLACK WINS!" << endl;
+        }
+        else if (popCount(playerTwo->pieceColour) > popCount(playerOne->pieceColour))
+        {
+            cout << "WHITE WINS!" << endl;
+        }
+    }
+    else if (s == BLACK_MOVE && generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0)
+    {
+        s = WHITE_MOVE;
+    }
+    else if (s == WHITE_MOVE && generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
+    {
+        s = BLACK_MOVE;
+    }
+    if(s == WHITE_MOVE && isValid(playerTwo->pieceColour, 
+                        playerOne->pieceColour, index) != 0)
+    {
 
+        commitMove(&playerTwo->pieceColour, &playerOne->pieceColour, index);
+        s = BLACK_MOVE;
+    }
 }
 
 void Board::printBitboard(U64 bbOne, U64 bbTwo)
@@ -337,10 +390,10 @@ void Board::printBitboard(U64 bbOne, U64 bbTwo)
 
 void Board::printSingleBitboard(U64 bb)
 {
-    for (int i = 7; i > -1; i--)
+    for (int i = 0; i <8 ; i++)
     {
-        cout << 8 - i << "  "; // Prints the rank
-        for (int j = 7; j > -1; j--)
+        cout << i+1 << "  "; // Prints the rank
+        for (int j = 0; j < 8; j++)
         {
             int square = i * 8 + j;
             cout << (GET_BIT(bb, square) ? 1 : 0) << " "; // Prints either a 1 or 0 for square
@@ -349,4 +402,115 @@ void Board::printSingleBitboard(U64 bb)
     }
     cout << endl
          << "   a b c d e f g h" << endl; // Prints the file
+}
+
+int Board::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
+{
+
+    int ownCount, oppCount;
+    U64 ownCorners = bbOwn & CORNER_MASK;
+    U64 oppCorners = bbOpponent & CORNER_MASK;
+    int value = 0;
+
+    if (!ownMoves && !oppMoves)
+    {
+        /* Terminal state. */
+        ownCount = popCount(bbOwn);
+        oppCount = popCount(bbOpponent);
+        return (ownCount - oppCount) * (1 << 20);
+    }
+
+    value = value + ((popCount(ownCorners) - popCount(oppCorners)) * 20);
+    value = value + ((popCount(ownMoves) - popCount(oppMoves)) * 5);
+    value = value + ((rand() % 20) * 1);
+
+    return value;
+}
+
+int Board::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
+               int *bestMove, int *evalCount)
+{
+
+    U64 ownNewDisks, oppNewDisks;
+    U64 ownMoves = generateMoves(bbOwn, bbOpponent);
+    U64 oppMoves = generateMoves(bbOpponent, bbOwn);
+
+    if (!ownMoves && oppMoves)
+    {
+        return -searchMove(bbOpponent, bbOwn, maxDepth, -beta, -alpha,
+                           bestMove, evalCount);
+    }
+
+    if (maxDepth == 0 || (!ownMoves && !oppMoves))
+    {
+        ++*evalCount;
+        return evaluateMove(bbOwn, bbOpponent, ownMoves, oppMoves);
+    }
+
+    int best = -INT_MAX;
+    for (int i = 0; i < 64; i++)
+    {
+        if (!(ownMoves & (1ULL << i)))
+        {
+            continue;
+        }
+
+        ownNewDisks = bbOwn;
+        oppNewDisks = bbOpponent;
+        commitMove(&ownNewDisks, &oppNewDisks, i);
+
+        int a = -searchMove(bbOpponent, bbOwn, maxDepth - 1, -beta, -alpha,
+                            NULL, evalCount);
+
+        if (a > best)
+        {
+            best = a;
+            if (bestMove)
+            {
+                *bestMove = i;
+            }
+            alpha = a > alpha ? a : alpha;
+
+            if (alpha >= beta)
+            {
+                break;
+            }
+        }
+    }
+    return best;
+}
+
+int Board::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
+                               int startDepth, int evalBudget)
+{
+    int depth, bestMove, evalCount, s;
+
+    evalCount = 0;
+    bestMove = -1;
+    for (depth = startDepth; evalCount < evalBudget; depth++)
+    {
+        s = searchMove(bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX, &bestMove, &evalCount);
+        if (s >= (1 << 20) || -s >= (1 << 20))
+        {
+            break;
+        }
+    }
+
+    return bestMove;
+}
+
+void Board::computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
+{
+    int move_idx;
+
+    static const int START_DEPTH = 8;
+    static const int EVAL_BUDGET = 10000;
+
+    move_idx = iterativeSearchMove(bbOwn, bbOpponent,
+                                   START_DEPTH, EVAL_BUDGET);
+
+    cout << move_idx << endl;
+
+    *row = move_idx / 8;
+    *col = move_idx % 8;
 }

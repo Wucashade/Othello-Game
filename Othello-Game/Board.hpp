@@ -1,9 +1,9 @@
-#pragma once
-
 #include <SDL.h>
 #include <SDL_image.h>
 #include <iostream>
 #include "define.hpp"
+#include "Player.hpp"
+#pragma once
 
 typedef uint64_t U64;
 
@@ -16,7 +16,7 @@ public:
 
 	void init();
 	void renderBoard();
-	void render();
+	void render(U64 bbOne, U64 bbTwo);
 	void update();
 	void resize();
 	int getHeight();
@@ -27,19 +27,26 @@ public:
 	U64 shiftOne(U64 bb, int dir8);
 	int popCount(U64 bb);
 	U64 generateMoves(U64 bbOwn, U64 bbOpponent);
-	bool isValid(U64 bb, int index);
+	bool isValid(U64 bbOwn, U64 bbOpponent, int index);
 	void commitMove(U64 *bbOwn, U64 *bbOpponent, int index);
-	void handleMouseButtonDown(SDL_MouseButtonEvent& b, U64 bbOwn, U64 bbOpponent);
+	bool handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* bbOwn, Player* bbOpponent);
+	void placeDisk(Player* playerOne, Player* playerTwo, int index);
 	void printSingleBitboard(U64 bb);
 	void printBitboard(U64 bbOwn, U64 bbOpponent);
-	
-	
+	int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves);
+	int searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evalCount);
+	int iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent, int startDepth, int evalBudget);
+	void computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col);
+
 
 	SDL_Color outlineColour;
 	SDL_Color boxColour;
 
+
 	U64 bitboardWhite;
 	U64 bitboardBlack;
+
+	bool moveMade;
 
 	
 

@@ -1,9 +1,8 @@
-#pragma once
-
 #include "define.hpp"
 #include <SDL.h>
 #include "Board.hpp"
 #include "Player.hpp"
+#pragma once
 
 
 typedef uint64_t U64;
@@ -22,10 +21,15 @@ class Game
 		void resize();
 		
 		void handleMouseButtonDown(SDL_MouseButtonEvent& b);
-		void play();
+		void computerMove();
+		void nextTurn();
+		void computerTurn(Player* currentPlayer, Player* opponentPlayer);
 
 		static int boardTopLeftX;
 		static int boardTopLeftY;
+
+		bool playerCanMove;
+		bool moveMade;
 
 
 	private:

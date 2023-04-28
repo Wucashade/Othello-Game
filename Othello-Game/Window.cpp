@@ -10,7 +10,7 @@ int Window::windowWidth = 0;
 
 Window::Window()
 {
-
+    frozen = true; 
 };
 
 Window::~Window()
@@ -65,16 +65,16 @@ bool Window::running()
 
 void Window::clean()
 {
-
     // Cleans the window after it is closed
+    delete(game);
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
     SDL_Quit();
 };
 
-void Window::update() 
+void Window::update(float deltaTime) 
 {
-    
+    game->update();
 }
 
 void Window::eventManager()
@@ -82,37 +82,32 @@ void Window::eventManager()
 
     // Manages events that relate to SDL 
     SDL_Event windowEvent;
-    if (SDL_PollEvent(&windowEvent))
+    while (SDL_PollEvent(&windowEvent))
     {
         switch (windowEvent.type)
         {
-        case SDL_QUIT:
-            isRunning = false;
-            break;
+            case SDL_QUIT:
+                isRunning = false;
+                break;
 
-        case SDL_WINDOWEVENT:
-            if (windowEvent.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) 
-            {
-                resize(windowEvent.window.data1, windowEvent.window.data2);
-            }
-        case SDL_MOUSEBUTTONDOWN:
-            game -> handleMouseButtonDown(windowEvent.button);
-		break;
-
-        default:
-            break;
-
-
+            case SDL_WINDOWEVENT:
+                if (windowEvent.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) 
+                {
+                    resize(windowEvent.window.data1, windowEvent.window.data2);
+                }
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                game -> handleMouseButtonDown(windowEvent.button);
+                break;
+        
+            default:
+                break;
         }
-
     }
-
-
 };
 
 void Window::render() 
 {
-
     //Renders all the graphics
     SDL_SetRenderDrawColor(renderer, 211, 211, 211, 255);
 
