@@ -13,6 +13,13 @@ typedef uint64_t U64;
 #define GET_BIT(bb, square) (bb & (1ULL << square))
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
 #define CORNER_MASK 0x8100000000000081ULL
+#define C_SQUARES_MASK 0x4281000000008142ULL
+#define X_SQUARES_MASK 0x42000000004200ULL
+#define B_SQUARES_MASK 0x1800008181000018ULL
+#define A_SQUARES_MASK 0x2400810000810024ULL
+#define S_SQUARES_MASK 0x240000240000ULL
+#define INNER_MIDDLE_MASK 0x183C3C180000ULL
+#define OUTER_MIDDLE_MASK 0x3C424242423C00ULL
 // Credits to @chessprogramming591 teaching these macros.
 // Link : https://www.youtube.com/watch?v=o-ySJ2EBarY&list=PLmN0neTso3Jxh8ZIylk74JpwfiWNI76Cs&index=2
 
@@ -40,49 +47,9 @@ enum state
     GAME_OVER
 };
 
-/*
-    Masks to ignore moves that go out of bitboard bounds
-    Source for masks: https://www.chessprogramming.org/General_Setwise_Operations#Shifting_Bitboards
-*/
-U64 avoidWrap[8] =
-    {
-        0xfefefefefefefe00, // UP-LEFT
-        0xfefefefefefefefe, // LEFT
-        0x00fefefefefefefe, // DOWN-LEFT
-        0x00ffffffffffffff, // DOWN
-        0x007f7f7f7f7f7f7f, // DOWN-RIGHT
-        0x7f7f7f7f7f7f7f7f, // RIGHT
-        0x7f7f7f7f7f7f7f00, // UP-RIGHT
-        0xffffffffffffff00, // UP
-};
+Bitboards::Bitboards(){};
 
-int shift[8] = {9, 1, -7, -8, -9, -1, 7, 8};
 
-/*
-   9     8    7
-     \   |   /
-      \  | /
-  1 --- Bit --- -1
-       / | \
-     /   |   \
-   -7    -8   -9
-*/
-
-/*
-The function shiftOne shifts the bit in the 8 different directions
-that are shown above.
-*/
-
-U64 shiftOne(U64 bb, int dir8)
-{
-    if (dir8 < 0 || dir8 > 7) // Check to make sure that the direction exists in the array
-    {
-        cout << "Invalid direction" << endl;
-    }
-    int a = shift[dir8];
-    return (a > 0) ? ((bb << a) & avoidWrap[dir8]) : ((bb >> -a) & avoidWrap[dir8]);
-    // Shifts left if the value is positive and right if negative, also applies mask so that the bits don't wrap around to the other side of the bitboard if theyre at the end
-}
 
 // Function to print out the current bitboard
 
@@ -158,190 +125,7 @@ int popCount(U64 bb)
     }
 }
 
-U64 generateMoves(U64 bbOwn, U64 bbOpponent)
-{
-    U64 emptyBB = ~(bbOwn | bbOpponent);
-    U64 moves;
-    U64 legalMoves = 0;
-
-    for (int i = 0; i < 8; i++)
-    {
-
-        moves = shiftOne(bbOwn, i) & bbOpponent;
-
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-
-        legalMoves |= shiftOne(moves, i) & emptyBB;
-    }
-
-    return legalMoves;
-}
-
-bool isValid(U64 bb, int index)
-{
-    U64 checkedBit = 1ULL << index;
-    if (bb == bitboardWhite)
-    {
-        return (generateMoves(bitboardWhite, bitboardBlack) & checkedBit) != 0;
-    }
-    else
-    {
-        return (generateMoves(bitboardBlack, bitboardWhite) & checkedBit) != 0;
-    }
-}
-
-void commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
-{
-
-    U64 moves, disk;
-    U64 newDisk = 1ULL << index;
-    U64 capturedDisks = 0;
-
-    if (isValid(*bbOwn, index) == 0)
-    {
-        cout << "Invalid Move" << endl;
-    }
-    else
-    {
-        *bbOwn |= newDisk;
-
-        for (int i = 0; i < 8; i++)
-        {
-
-            moves = shiftOne(newDisk, i) & *bbOpponent;
-
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-
-            disk = shiftOne(moves, i) & *bbOwn;
-            capturedDisks |= (disk ? moves : 0);
-        }
-
-        *bbOwn ^= capturedDisks;
-        *bbOpponent ^= capturedDisks;
-    }
-}
-
-int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
-{
-
-    int ownCount, oppCount;
-    U64 ownCorners = bbOwn & CORNER_MASK;
-    U64 oppCorners = bbOpponent & CORNER_MASK;
-    int value = 0;
-
-    if (!ownMoves && !oppMoves)
-    {
-        /* Terminal state. */
-        ownCount = popCount(bbOwn);
-        oppCount = popCount(bbOpponent);
-        return (ownCount - oppCount) * (1 << 20);
-    }
-
-    value = value + ((popCount(ownCorners) - popCount(oppCorners)) * 20);
-    value = value + ((popCount(ownMoves) - popCount(oppMoves)) * 5);
-    value = value + ((rand() % 20) * 1);
-
-    return value;
-}
-
-int searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
-               int *bestMove, int *evalCount)
-{
-
-    U64 ownNewDisks, oppNewDisks;
-    U64 ownMoves = generateMoves(bbOwn, bbOpponent);
-    U64 oppMoves = generateMoves(bbOpponent, bbOwn);
-
-    if (!ownMoves && oppMoves)
-    {
-        return -searchMove(bbOpponent, bbOwn, maxDepth, -beta, -alpha,
-                           bestMove, evalCount);
-    }
-
-    if (maxDepth == 0 || (!ownMoves && !oppMoves))
-    {
-        ++*evalCount;
-        return evaluateMove(bbOwn, bbOpponent, ownMoves, oppMoves);
-    }
-
-    int best = -INT_MAX;
-    for (int i = 0; i < 64; i++)
-    {
-        if (!(ownMoves & (1ULL << i)))
-        {
-            continue;
-        }
-
-        ownNewDisks = bbOwn;
-        oppNewDisks = bbOpponent;
-        commitMove(&ownNewDisks, &oppNewDisks, i);
-
-        int a = -searchMove(bbOpponent, bbOwn, maxDepth - 1, -beta, -alpha,
-                            NULL, evalCount);
-
-        if (a > best)
-        {
-            best = a;
-            if (bestMove)
-            {
-                *bestMove = i;
-            }
-            alpha = a > alpha ? a : alpha;
-
-            if (alpha >= beta)
-            {
-                break;
-            }
-        }
-    }
-    return best;
-}
-
-static int iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
-                               int startDepth, int evalBudget)
-{
-    int depth, bestMove, evalCount, s;
-
-    evalCount = 0;
-    bestMove = -1;
-    for (depth = startDepth; evalCount < evalBudget; depth++)
-    {
-        s = searchMove(bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX,
-                       &bestMove, &evalCount);
-        if (s >= (1 << 20) || -s >= (1 << 20))
-        {
-            break;
-        }
-    }
-
-    return bestMove;
-}
-
-void computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
-{
-    int move_idx;
-
-    static const int START_DEPTH = 8;
-    static const int EVAL_BUDGET = 10000;
-
-    move_idx = iterativeSearchMove(bbOwn, bbOpponent,
-                                   START_DEPTH, EVAL_BUDGET);
-
-    cout << move_idx << endl;
-
-    *row = move_idx / 8;
-    *col = move_idx % 8;
-}
-
-void game()
+void Bitboards::game()
 {
 
     int row = 0, col = 0;
@@ -381,11 +165,11 @@ void game()
                 cin >> col;
             }
             */
-            computeMove(bitboardBlack, bitboardWhite, &row, &col);
-            commitMove(&bitboardBlack, &bitboardWhite, (row * 8 + col));
+            aiOne->computeMove(bitboardBlack, bitboardWhite, &row, &col);
+            aiOne->commitMove(&bitboardBlack, &bitboardWhite, (row * 8 + col));
             cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
         }
-        if (generateMoves(bitboardBlack, bitboardWhite) == 0 && generateMoves(bitboardWhite, bitboardBlack) == 0)
+        if (aiOne->generateMoves(bitboardBlack, bitboardWhite) == 0 && aiOne->generateMoves(bitboardWhite, bitboardBlack) == 0)
         {
             s = GAME_OVER;
             cout << "GAME OVER" << endl;
@@ -398,12 +182,12 @@ void game()
                 cout << "BLACK WINS!" << endl;
             }
         }
-        else if (s == BLACK_MOVE && generateMoves(bitboardBlack, bitboardWhite) == 0)
+        else if (s == BLACK_MOVE && aiOne->generateMoves(bitboardBlack, bitboardWhite) == 0)
         {
             s = WHITE_MOVE;
             cout << "hi";
         }
-        else if (s == WHITE_MOVE && generateMoves(bitboardWhite, bitboardBlack) == 0)
+        else if (s == WHITE_MOVE && aiOne->generateMoves(bitboardWhite, bitboardBlack) == 0)
         {
             s = BLACK_MOVE;
         }
@@ -419,16 +203,18 @@ void game()
             s = BLACK_MOVE;
 
             cout << "WHITE MOVE" << endl;
-            computeMove(bitboardWhite, bitboardBlack, &row, &col);
-            commitMove(&bitboardWhite, &bitboardBlack, (row * 8 + col));
+            aiTwo->computeMove(bitboardWhite, bitboardBlack, &row, &col);
+            aiTwo->commitMove(&bitboardWhite, &bitboardBlack, (row * 8 + col));
 
             cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
         }
     }
 }
 
-int main()
+int Bitboards::init()
 {
+    AIOne* aiOne = new AIOne();
+    AITwo* aiTwo = new AITwo();
     game();
 
     return 0;

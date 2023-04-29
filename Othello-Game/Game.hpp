@@ -2,6 +2,7 @@
 #include <SDL.h>
 #include "Board.hpp"
 #include "Player.hpp"
+#include <thread>
 #pragma once
 
 
