@@ -36,7 +36,7 @@ void Window::init(const char* title, int positionX, int positionY)
             SDL_SetWindowMinimumSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
         }
 
-        renderer = SDL_CreateRenderer(window, -1, 0);
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
         if (renderer)
         {
 
@@ -81,6 +81,7 @@ void Window::eventManager()
 {
 
     // Manages events that relate to SDL 
+
     SDL_Event windowEvent;
     while (SDL_PollEvent(&windowEvent))
     {

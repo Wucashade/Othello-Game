@@ -8,7 +8,7 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <ctime>
-#include "Bitboards.hpp"
+// #include "Bitboards.hpp"
 #if defined(_WIN32) and defined(_MSC_VER)
 	#include <crtdbg.h>
 #endif
@@ -17,7 +17,7 @@
 
 int main(int argc, char* argv[])
 {
-    /*
+    
     srand(time(NULL));
 	const int FPS = 60;
 	const int frameDelay = 1000 / FPS;
@@ -45,11 +45,12 @@ int main(int argc, char* argv[])
 
     window->clean();
     delete window;
-    */
-
-   Bitboards* bitboardTest = new Bitboards();
-   bitboardTest->init();
-
+    
+    
+    
+    // Bitboards* bitboardTest = new Bitboards();
+    // bitboardTest->init();
+    
 
 
     return 0;

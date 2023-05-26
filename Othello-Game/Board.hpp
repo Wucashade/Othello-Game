@@ -30,9 +30,10 @@ public:
 	bool isValid(U64 bbOwn, U64 bbOpponent, int index);
 	void commitMove(U64 *bbOwn, U64 *bbOpponent, int index);
 	bool handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* bbOwn, Player* bbOpponent);
-	void placeDisk(Player* playerOne, Player* playerTwo, int index);
 	void printSingleBitboard(U64 bb);
 	void printBitboard(U64 bbOwn, U64 bbOpponent);
+	void frontierDisks(U64 bbOwn, U64 bbOpponent, U64 *myFront, U64 *oppFront);
+	int discSquareValue(U64 bbOwn, U64 bbOpponent);
 	int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves);
 	int searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evalCount);
 	int iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent, int startDepth, int evalBudget);

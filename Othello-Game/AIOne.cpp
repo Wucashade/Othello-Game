@@ -5,14 +5,8 @@
 
 #define GET_BIT(bb, square) (bb & (1ULL << square))
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
-#define CORNER_MASK 0x8100000000000081ULL
-#define C_SQUARES_MASK 0x4281000000008142ULL
-#define X_SQUARES_MASK 0x42000000004200ULL
-#define B_SQUARES_MASK 0x1800008181000018ULL
-#define A_SQUARES_MASK 0x2400810000810024ULL
-#define S_SQUARES_MASK 0x240000240000ULL
-#define INNER_MIDDLE_MASK 0x183C3C180000ULL
-#define OUTER_MIDDLE_MASK 0x3C424242423C00ULL
+#define WIN_BONUS (1 << 20)
+
 
 using namespace std;
 
@@ -39,7 +33,7 @@ enum state
     Masks to ignore moves that go out of bitboard bounds
     Source for masks: https://www.chessprogramming.org/General_Setwise_Operations#Shifting_Bitboards
 */
-U64 avoidWrap[8] =
+static U64 avoidWrap[8] =
     {
         0xfefefefefefefe00, // UP-LEFT
         0xfefefefefefefefe, // LEFT
@@ -51,7 +45,7 @@ U64 avoidWrap[8] =
         0xffffffffffffff00, // UP
 };
 
-int shift[8] = {9, 1, -7, -8, -9, -1, 7, 8};
+static int shift[8] = {9, 1, -7, -8, -9, -1, 7, 8};
 
 /*
    9     8    7
@@ -68,7 +62,25 @@ The function shiftOne shifts the bit in the 8 different directions
 that are shown above.
 */
 
+static U64 squareDefinitions[8] =
+{
+    0x8100000000000081ULL, // Corner mask
+    0x4281000000008142ULL, //C squares mask
+    0x42000000004200ULL, // X squares mask
+    0x1800008181000018ULL,   // B squares mask
+    0x2400810000810024ULL,    // A squares mask
+    0x240000240000ULL,   // S squares mask
+    0x183C3C180000ULL, // Inner middle mask
+    0x3C424242423C00ULL   // Outer middle mask
+};
+
+static int squareEarlyValues[8] = {30, -6, -15, -1, 0, 0, -1, -3}; //{30, -12, -15, -1, 0, 0, -1, -3}
+static int squareMidValues[8] = {50, -5, -20, 6, 10, 2, 1, -4};    //{50, -10, -20, 6, 10, 2, 1, -4}
+static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};    //{100, -25, -25, 5, 10, 5, 2, 1}
+
 AIOne::AIOne(){};
+
+
 
 U64 AIOne::shiftOne(U64 bb, int dir8)
 {
@@ -105,6 +117,8 @@ U64 AIOne::generateMoves(U64 bbOwn, U64 bbOpponent)
     U64 moves;
     U64 legalMoves = 0;
 
+    assert((bbOwn & bbOpponent) == 0 && "Disk sets should be disjoint.");
+
     for (int i = 0; i < 8; i++)
     {
 
@@ -128,75 +142,146 @@ bool AIOne::isValid(U64 bbOwn, U64 bbOpponent, int index)
     return (generateMoves(bbOwn, bbOpponent) & checkedBit) != 0;
 }
 
-void AIOne::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
+void AIOne::commitMove(AIOne* aiOne, U64 *bbOwn, U64 *bbOpponent, int index)
 {
 
     U64 moves, disk;
     U64 newDisk = 1ULL << index;
     U64 capturedDisks = 0;
 
-    if (isValid(*bbOwn, *bbOpponent, index) == 0)
+    assert(index < 64 && "Move must be within the board.");
+    assert((*bbOwn & *bbOpponent) == 0 && "Disk sets must be disjoint.");
+    assert(!((*bbOwn | *bbOpponent) & newDisk) && "Target not empty!");
+   
+    *bbOwn |= newDisk;
+
+    for (int i = 0; i < 8; i++)
     {
-        cout << "Invalid Move" << endl;
+
+        moves = shiftOne(newDisk, i) & *bbOpponent;
+
+        moves |= shiftOne(moves, i) & *bbOpponent;
+        moves |= shiftOne(moves, i) & *bbOpponent;
+        moves |= shiftOne(moves, i) & *bbOpponent;
+        moves |= shiftOne(moves, i) & *bbOpponent;
+        moves |= shiftOne(moves, i) & *bbOpponent;
+
+        disk = shiftOne(moves, i) & *bbOwn;
+        capturedDisks |= (disk ? moves : 0);
     }
-    else
-    {
-        *bbOwn |= newDisk;
 
-        for (int i = 0; i < 8; i++)
-        {
+    *bbOwn ^= capturedDisks;
+    *bbOpponent ^= capturedDisks;
+}
 
-            moves = shiftOne(newDisk, i) & *bbOpponent;
+void AIOne::frontierDisks(U64 bbOwn, U64 bbOpponent,
+                           U64 *myFront, U64 *oppFront)
+{
+        U64 emptyCells = ~(bbOwn | bbOpponent);
+        U64 x;
+        int dir;
 
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
-            moves |= shiftOne(moves, i) & *bbOpponent;
+        *myFront = 0;
+        *oppFront = 0;
 
-            disk = shiftOne(moves, i) & *bbOwn;
-            capturedDisks |= (disk ? moves : 0);
+        for (dir = 0; dir < 8; dir++) {
+                /* Check cells adjacent to empty cells. */
+                x = shiftOne(emptyCells, dir);
+                *myFront |= x & bbOwn;
+                *oppFront |= x & bbOpponent;
         }
+}
 
-        *bbOwn ^= capturedDisks;
-        *bbOpponent ^= capturedDisks;
+int AIOne::discSquareValue(U64 bbOwn, U64 bbOpponent)
+{
+
+    int value;
+    int discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
+
+    for(int i = 0; i<(sizeof(squareDefinitions)/sizeof(squareDefinitions[0])); i++)
+    {
+        U64 ownCheckedSquares = bbOwn &  squareDefinitions[i];
+        U64 oppCheckedSquares = bbOpponent &  squareDefinitions[i];
+
+        if(discsPlaced < 25)
+        {
+            value += popCount(ownCheckedSquares) * squareEarlyValues[i];
+            value -= popCount(oppCheckedSquares) * squareEarlyValues[i];
+        }
+        else if(discsPlaced < 45 && discsPlaced > 24)
+        {
+            value += popCount(ownCheckedSquares) * squareMidValues[i];
+            value -= popCount(oppCheckedSquares) * squareMidValues[i];
+        }
+        else
+        {
+            value += popCount(ownCheckedSquares) * squareEndValues[i];
+            value -= popCount(oppCheckedSquares) * squareEndValues[i];
+        }
     }
+
+    return value;
 }
 
 int AIOne::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
 {
 
-    int ownCount, oppCount;
-    U64 ownCorners = bbOwn & CORNER_MASK;
-    U64 oppCorners = bbOpponent & CORNER_MASK;
+    int ownCount, oppCount, discsPlaced;
+    U64 myFront, oppFront;
     int value = 0;
-
+    U64 ownCheckedSquares, oppCheckedSquares;
+    
     if (!ownMoves && !oppMoves)
     {
         /* Terminal state. */
         ownCount = popCount(bbOwn);
         oppCount = popCount(bbOpponent);
-        return (ownCount - oppCount) * (1 << 20);
+        return (ownCount - oppCount) * WIN_BONUS;
     }
-
-    value = value + ((popCount(ownCorners) - popCount(oppCorners)) * 20);
-    value = value + ((popCount(ownMoves) - popCount(oppMoves)) * 5);
-    value = value + ((rand() % 20) * 1);
+    frontierDisks(bbOwn, bbOpponent, &myFront, &oppFront);
+    
+    discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
+    //EVALUATION FOR EARLY GAME
+    if(discsPlaced < 25)
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 20);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 80; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 40;  //FRONTIER
+    }
+    //EVALUATION FOR MID GAME
+    else if(discsPlaced < 45 && discsPlaced > 24)
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 40);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 60; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 70;  //FRONTIER
+    }
+    //EVALUATION FOR END GAME
+    else
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 50);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 20; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 20;  //FRONTIER
+    }
+    
+    
 
     return value;
 }
 
-int AIOne::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
+int AIOne::searchMove(AIOne* aiOne, U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
                int *bestMove, int *evalCount)
 {
 
     U64 ownNewDisks, oppNewDisks;
-    U64 ownMoves = generateMoves(bbOwn, bbOpponent);
-    U64 oppMoves = generateMoves(bbOpponent, bbOwn);
+    U64 ownMoves, oppMoves;
+    int a, best;
+
+    ownMoves = generateMoves(bbOwn, bbOpponent);
+    oppMoves = generateMoves(bbOpponent, bbOwn);
 
     if (!ownMoves && oppMoves)
     {
-        return -searchMove(bbOpponent, bbOwn, maxDepth, -beta, -alpha,
+        return -searchMove(aiOne, bbOpponent, bbOwn, maxDepth, -beta, -alpha,
                            bestMove, evalCount);
     }
 
@@ -205,8 +290,7 @@ int AIOne::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
         ++*evalCount;
         return evaluateMove(bbOwn, bbOpponent, ownMoves, oppMoves);
     }
-
-    int best = -INT_MAX;
+    best = -INT_MAX;
     for (int i = 0; i < 64; i++)
     {
         if (!(ownMoves & (1ULL << i)))
@@ -216,17 +300,19 @@ int AIOne::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
 
         ownNewDisks = bbOwn;
         oppNewDisks = bbOpponent;
-        commitMove(&ownNewDisks, &oppNewDisks, i);
+        commitMove(aiOne, &ownNewDisks, &oppNewDisks, i);
 
-        int a = -searchMove(bbOpponent, bbOwn, maxDepth - 1, -beta, -alpha,
+        a = -searchMove(aiOne, oppNewDisks, ownNewDisks, maxDepth - 1, -beta, -alpha,
                             NULL, evalCount);
-
+                            
         if (a > best)
         {
             best = a;
             if (bestMove)
             {
+                
                 *bestMove = i;
+                
             }
             alpha = a > alpha ? a : alpha;
 
@@ -236,42 +322,56 @@ int AIOne::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
             }
         }
     }
+   
     return best;
 }
 
-int AIOne::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
+int AIOne::iterativeSearchMove(AIOne* aiOne, U64 &bbOwn, U64 &bbOpponent,
                                int startDepth, int evalBudget)
 {
     int depth, bestMove, evalCount, s;
 
+    assert(startDepth > 0 && "At least one move must be explored.");
+
     evalCount = 0;
-    bestMove = -1;
+    bestMove = 0;
     for (depth = startDepth; evalCount < evalBudget; depth++)
     {
-        s = searchMove(bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX,
+        s = searchMove(aiOne, bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX,
                        &bestMove, &evalCount);
-        if (s >= (1 << 20) || -s >= (1 << 20))
+        if (s >= WIN_BONUS || -s >= WIN_BONUS)
         {
             break;
+            
         }
+        
     }
-
+    assert(bestMove != -1 && "No move found?");
     return bestMove;
 }
 
-void AIOne::computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
+void AIOne::computeMove(AIOne* aiOne, U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
 {
     int move_idx;
 
-    static const int START_DEPTH = 8;
-    static const int EVAL_BUDGET = 10000;
+    int startDepth;
 
-    move_idx = iterativeSearchMove(bbOwn, bbOpponent,
-                                   START_DEPTH, EVAL_BUDGET);
+    if((popCount(bbOwn) + popCount(bbOpponent)) > 44)
+    {
+        startDepth = 12;
+    }
+    else
+    {
+        startDepth = 8;
+    }
+    static const int evaluationBudget = 250000;
 
-    cout << move_idx << endl;
+    move_idx = iterativeSearchMove(aiOne, bbOwn, bbOpponent,
+                                   startDepth, evaluationBudget);
+
 
     *row = move_idx / 8;
     *col = move_idx % 8;
 }
+
 

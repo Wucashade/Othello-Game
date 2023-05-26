@@ -38,7 +38,7 @@ enum state
     Masks to ignore moves that go out of bitboard bounds
     Source for masks: https://www.chessprogramming.org/General_Setwise_Operations#Shifting_Bitboards
 */
-U64 avoidWrap2[8] =
+static U64 avoidWrap2[8] =
     {
         0xfefefefefefefe00, // UP-LEFT
         0xfefefefefefefefe, // LEFT
@@ -50,7 +50,7 @@ U64 avoidWrap2[8] =
         0xffffffffffffff00, // UP
 };
 
-int shift2[8] = {9, 1, -7, -8, -9, -1, 7, 8};
+static int shift2[8] = {9, 1, -7, -8, -9, -1, 7, 8};
 
 /*
    9     8    7
@@ -66,6 +66,21 @@ int shift2[8] = {9, 1, -7, -8, -9, -1, 7, 8};
 The function shiftOne shifts the bit in the 8 different directions
 that are shown above.
 */
+static U64 squareDefinitions2[8] =
+{
+    0x8100000000000081ULL, // Corner mask
+    0x4281000000008142ULL, //C squares mask
+    0x42000000004200ULL, // X squares mask
+    0x1800008181000018ULL,   // B squares mask
+    0x2400810000810024ULL,    // A squares mask
+    0x240000240000ULL,   // S squares mask
+    0x183C3C180000ULL, // Inner middle mask
+    0x3C424242423C00ULL   // Outer middle mask
+};
+
+static int squareEarlyValues2[8] = {30, -6, -15, -1, 0, 0, -1, -3};
+static int squareMidValues2[8] = {50, -5, -20, 6, 10, 2, 1, -4};
+static int squareEndValues2[8] = {100, -12, -25, 5, 10, 5, 2, 1};
 
 AITwo::AITwo(){};
 
@@ -127,14 +142,14 @@ bool AITwo::isValid(U64 bbOwn, U64 bbOpponent, int index)
     return (generateMoves(bbOwn, bbOpponent) & checkedBit) != 0;
 }
 
-void AITwo::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
+void AITwo::commitMove(AITwo* aiTwo, U64 *bbOwn, U64 *bbOpponent, int index)
 {
 
     U64 moves, disk;
     U64 newDisk = 1ULL << index;
     U64 capturedDisks = 0;
 
-    if (isValid(*bbOwn, *bbOpponent, index) == 0)
+    if (aiTwo->isValid(*bbOwn, *bbOpponent, index) == 0)
     {
         cout << "Invalid Move" << endl;
     }
@@ -162,14 +177,63 @@ void AITwo::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
     }
 }
 
+void AITwo::frontierDisks(U64 bbOwn, U64 bbOpponent,
+                           U64 *myFront, U64 *oppFront)
+{
+        U64 emptyCells = ~(bbOwn | bbOpponent);
+        U64 x;
+        int dir;
+
+        *myFront = 0;
+        *oppFront = 0;
+
+        for (dir = 0; dir < 8; dir++) {
+                /* Check cells adjacent to empty cells. */
+                x = shiftOne(emptyCells, dir);
+                *myFront |= x & bbOwn;
+                *oppFront |= x & bbOpponent;
+        }
+}
+
+int AITwo::discSquareValue(U64 bbOwn, U64 bbOpponent)
+{
+
+    int value;
+    int discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
+
+    for(int i = 0; i<(sizeof(squareDefinitions2)/sizeof(squareDefinitions2[0])); i++)
+    {
+        U64 ownCheckedSquares = bbOwn &  squareDefinitions2[i];
+        U64 oppCheckedSquares = bbOpponent &  squareDefinitions2[i];
+
+        if(discsPlaced < 25)
+        {
+            value += popCount(ownCheckedSquares) * squareEarlyValues2[i];
+            value -= popCount(oppCheckedSquares) * squareEarlyValues2[i];
+        }
+        else if(discsPlaced < 45 && discsPlaced > 24)
+        {
+            value += popCount(ownCheckedSquares) * squareMidValues2[i];
+            value -= popCount(oppCheckedSquares) * squareMidValues2[i];
+        }
+        else
+        {
+            value += popCount(ownCheckedSquares) * squareEndValues2[i];
+            value -= popCount(oppCheckedSquares) * squareEndValues2[i];
+        }
+    }
+
+    return value;
+}
+
 int AITwo::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
 {
 
-    int ownCount, oppCount;
-    U64 ownCorners = bbOwn & CORNER_MASK;
-    U64 oppCorners = bbOpponent & CORNER_MASK;
+    int ownCount, oppCount, discsPlaced;
+    U64 myFront, oppFront;
     int value = 0;
-
+    U64 ownCheckedSquares, oppCheckedSquares;
+    
     if (!ownMoves && !oppMoves)
     {
         /* Terminal state. */
@@ -178,14 +242,37 @@ int AITwo::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
         return (ownCount - oppCount) * (1 << 20);
     }
 
-    value = value + ((popCount(ownCorners) - popCount(oppCorners)) * 20);
-    value = value + ((popCount(ownMoves) - popCount(oppMoves)) * 5);
-    value = value + ((rand() % 20) * 1);
+
+    frontierDisks(bbOwn, bbOpponent, &myFront, &oppFront);
+
+    discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
+    //EVALUATION FOR EARLY GAME
+    if(discsPlaced < 25)
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 20);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 80; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 40;  //FRONTIER
+    }
+    //EVALUATION FOR MID GAME
+    else if(discsPlaced < 45 && discsPlaced > 24)
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 40);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 60; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 70;  //FRONTIER
+    }
+    //EVALUATION FOR END GAME
+    else
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 50);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 20; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 20;  //FRONTIER
+    }
+    
 
     return value;
 }
 
-int AITwo::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
+int AITwo::searchMove(AITwo* aiTwo, U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
                int *bestMove, int *evalCount)
 {
 
@@ -195,7 +282,7 @@ int AITwo::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
 
     if (!ownMoves && oppMoves)
     {
-        return -searchMove(bbOpponent, bbOwn, maxDepth, -beta, -alpha,
+        return -searchMove(aiTwo, bbOpponent, bbOwn, maxDepth, -beta, -alpha,
                            bestMove, evalCount);
     }
 
@@ -215,9 +302,9 @@ int AITwo::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
 
         ownNewDisks = bbOwn;
         oppNewDisks = bbOpponent;
-        commitMove(&ownNewDisks, &oppNewDisks, i);
+        commitMove(aiTwo, &ownNewDisks, &oppNewDisks, i);
 
-        int a = -searchMove(bbOpponent, bbOwn, maxDepth - 1, -beta, -alpha,
+        int a = -searchMove(aiTwo, oppNewDisks, ownNewDisks, maxDepth - 1, -beta, -alpha,
                             NULL, evalCount);
 
         if (a > best)
@@ -238,7 +325,7 @@ int AITwo::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
     return best;
 }
 
-int AITwo::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
+int AITwo::iterativeSearchMove(AITwo* aiTwo, U64 &bbOwn, U64 &bbOpponent,
                                int startDepth, int evalBudget)
 {
     int depth, bestMove, evalCount, s;
@@ -247,7 +334,7 @@ int AITwo::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
     bestMove = -1;
     for (depth = startDepth; evalCount < evalBudget; depth++)
     {
-        s = searchMove(bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX,
+        s = searchMove(aiTwo, bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX,
                        &bestMove, &evalCount);
         if (s >= (1 << 20) || -s >= (1 << 20))
         {
@@ -258,17 +345,24 @@ int AITwo::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
     return bestMove;
 }
 
-void AITwo::computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
+void AITwo::computeMove(AITwo* aiTwo, U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
 {
     int move_idx;
 
-    static const int START_DEPTH = 8;
-    static const int EVAL_BUDGET = 10000;
+    int startDepth;
 
-    move_idx = iterativeSearchMove(bbOwn, bbOpponent,
-                                   START_DEPTH, EVAL_BUDGET);
+    if((popCount(bbOwn) + popCount(bbOpponent)) > 44)
+    {
+        startDepth = 12;
+    }
+    else
+    {
+        startDepth = 8;
+    }
+    static const int evaluationBudget = 250000;
 
-    cout << move_idx << endl;
+    move_idx = iterativeSearchMove(aiTwo, bbOwn, bbOpponent,
+                                   startDepth, evaluationBudget);
 
     *row = move_idx / 8;
     *col = move_idx % 8;

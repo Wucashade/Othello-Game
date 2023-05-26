@@ -47,6 +47,8 @@ enum state
     GAME_OVER
 };
 
+state s = BLACK_MOVE;
+
 Bitboards::Bitboards(){};
 
 
@@ -131,31 +133,37 @@ void Bitboards::game()
     int row = 0, col = 0;
     int cnt = 0;
 
+    bitboardWhite = 0ULL;
+    bitboardBlack = 0ULL;
+
     SET_BIT(bitboardWhite, d4);
     SET_BIT(bitboardWhite, e5);
     SET_BIT(bitboardBlack, e4);
     SET_BIT(bitboardBlack, d5);
     
-
-    state s = BLACK_MOVE;
+    s = BLACK_MOVE;
+    
 
     clock_t tStart = clock();
 
     while (!(s == GAME_OVER))
     {
 
-        if (s == BLACK_MOVE)
+        
+
+        if (s == BLACK_MOVE && aiOne->generateMoves(bitboardBlack, bitboardWhite) == 0)
+        {
+            s = WHITE_MOVE;
+        }
+        else if (s == WHITE_MOVE && aiTwo->generateMoves(bitboardWhite, bitboardBlack) == 0)
+        {
+            s = BLACK_MOVE;
+        }
+
+        else if (s == BLACK_MOVE)
         {
 
-            printBitboard(bitboardWhite, bitboardBlack);
-
-            cnt = popCount(bitboardBlack);
-            cout << "BLACK: " << cnt << endl;
-            cnt = popCount(bitboardWhite);
-            cout << "WHITE: " << cnt << endl;
-            s = WHITE_MOVE;
-
-            cout << "BLACK MOVE" << endl;
+           
             /*
             while (!(isValid(bitboardBlack, (row * 8 + col))))
             {
@@ -165,57 +173,228 @@ void Bitboards::game()
                 cin >> col;
             }
             */
-            aiOne->computeMove(bitboardBlack, bitboardWhite, &row, &col);
-            aiOne->commitMove(&bitboardBlack, &bitboardWhite, (row * 8 + col));
-            cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+        //    cout << "BLACK MOVE" << endl;
+        //    cout << "First row: " << row << " First col: " << col << endl;
+            aiOne->computeMove(aiOne, bitboardBlack, bitboardWhite, &row, &col);
+            aiOne->commitMove(aiOne, &bitboardBlack, &bitboardWhite, (row * 8 + col));
+            // cout << "Second row: " << row << " Second col: " << col << endl;
+            // cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+            //printBitboard(bitboardWhite, bitboardBlack);
+
+            // cnt = popCount(bitboardBlack);
+            // cout << "BLACK: " << cnt << endl;
+            // cnt = popCount(bitboardWhite);
+            // cout << "WHITE: " << cnt << endl;
+            s = WHITE_MOVE;
+
+            
         }
-        if (aiOne->generateMoves(bitboardBlack, bitboardWhite) == 0 && aiOne->generateMoves(bitboardWhite, bitboardBlack) == 0)
+        else if (s == WHITE_MOVE)
         {
-            s = GAME_OVER;
-            cout << "GAME OVER" << endl;
-            if (popCount(bitboardWhite) > popCount(bitboardBlack))
-            {
-                cout << "WHITE WINS!" << endl;
-            }
-            else if (popCount(bitboardBlack) > popCount(bitboardWhite))
-            {
-                cout << "BLACK WINS!" << endl;
-            }
+
+            // cout << "WHITE MOVE" << endl;
+            aiTwo->computeMove(aiTwo, bitboardWhite, bitboardBlack, &row, &col);
+            aiTwo->commitMove(aiTwo, &bitboardWhite, &bitboardBlack, (row * 8 + col));
+
+            // cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+            //printBitboard(bitboardWhite, bitboardBlack);
+
+            // cnt = popCount(bitboardBlack);
+            // cout << "BLACK: " << cnt << endl;
+            // cnt = popCount(bitboardWhite);
+            // cout << "WHITE: " << cnt << endl;
+            s = BLACK_MOVE;
+
+            
         }
-        else if (s == BLACK_MOVE && aiOne->generateMoves(bitboardBlack, bitboardWhite) == 0)
+        checkGameOver();
+        
+        
+        
+    }
+    cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+}
+
+void Bitboards::game2()
+{
+
+    int row = 0, col = 0;
+    int cnt = 0;
+
+    bitboardWhite = 0ULL;
+    bitboardBlack = 0ULL;
+    
+    s = BLACK_MOVE;
+
+    SET_BIT(bitboardWhite, d4);
+    SET_BIT(bitboardWhite, e5);
+    SET_BIT(bitboardBlack, e4);
+    SET_BIT(bitboardBlack, d5);
+    
+
+    
+
+    clock_t tStart = clock();
+
+    while (!(s == GAME_OVER))
+    {
+
+        if (s == BLACK_MOVE && aiTwo->generateMoves(bitboardBlack, bitboardWhite) == 0)
         {
             s = WHITE_MOVE;
-            cout << "hi";
         }
         else if (s == WHITE_MOVE && aiOne->generateMoves(bitboardWhite, bitboardBlack) == 0)
         {
             s = BLACK_MOVE;
         }
-        if (s == WHITE_MOVE)
+
+        else if (s == BLACK_MOVE)
         {
 
-            printBitboard(bitboardWhite, bitboardBlack);
+           
+            /*
+            while (!(isValid(bitboardBlack, (row * 8 + col))))
+            {
+                cout << "Enter row: ";
+                cin >> row;
+                cout << "Enter col: ";
+                cin >> col;
+            }
+            */
+        //    cout << "BLACK MOVE" << endl;
+        //    cout << "First row: " << row << " First col: " << col << endl;
+            aiTwo->computeMove(aiTwo, bitboardBlack, bitboardWhite, &row, &col);
+            aiTwo->commitMove(aiTwo, &bitboardBlack, &bitboardWhite, (row * 8 + col));
+            // cout << "Second row: " << row << " Second col: " << col << endl;
+            // cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+            //printBitboard(bitboardWhite, bitboardBlack);
 
+            // cnt = popCount(bitboardBlack);
+            // cout << "BLACK: " << cnt << endl;
+            // cnt = popCount(bitboardWhite);
+            // cout << "WHITE: " << cnt << endl;
+            s = WHITE_MOVE;
+
+            
+        }
+        else if (s == WHITE_MOVE)
+        {
+
+            // cout << "WHITE MOVE" << endl;
+            aiOne->computeMove(aiOne, bitboardWhite, bitboardBlack, &row, &col);
+            aiOne->commitMove(aiOne, &bitboardWhite, &bitboardBlack, (row * 8 + col));
+
+            // cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+            //printBitboard(bitboardWhite, bitboardBlack);
+
+            // cnt = popCount(bitboardBlack);
+            // cout << "BLACK: " << cnt << endl;
+            // cnt = popCount(bitboardWhite);
+            // cout << "WHITE: " << cnt << endl;
+            s = BLACK_MOVE;
+        }
+        checkGameOver2();
+        
+        
+        
+    }
+    cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+}
+
+void Bitboards::checkGameOver()
+{
+    if (aiOne->generateMoves(bitboardBlack, bitboardWhite) == 0 && aiTwo->generateMoves(bitboardWhite, bitboardBlack) == 0)
+    {
+        s = GAME_OVER;
+        cout << "GAME OVER" << endl;
+        if (popCount(bitboardWhite) > popCount(bitboardBlack))
+        {
+
+            int cnt = 0;
             cnt = popCount(bitboardBlack);
             cout << "BLACK: " << cnt << endl;
             cnt = popCount(bitboardWhite);
             cout << "WHITE: " << cnt << endl;
-            s = BLACK_MOVE;
 
-            cout << "WHITE MOVE" << endl;
-            aiTwo->computeMove(bitboardWhite, bitboardBlack, &row, &col);
-            aiTwo->commitMove(&bitboardWhite, &bitboardBlack, (row * 8 + col));
+            cout << "WHITE WINS!" << endl;
+        }
+        else if (popCount(bitboardBlack) > popCount(bitboardWhite))
+        {
 
-            cout << "Time: " << (double)(clock() - tStart) / CLOCKS_PER_SEC << endl;
+            int cnt = 0;
+            cnt = popCount(bitboardBlack);
+            cout << "BLACK: " << cnt << endl;
+            cnt = popCount(bitboardWhite);
+            cout << "WHITE: " << cnt << endl;
+
+            cout << "BLACK WINS!" << endl;
+        }
+        else
+        {
+            int cnt = 0;
+            cnt = popCount(bitboardBlack);
+            cout << "BLACK: " << cnt << endl;
+            cnt = popCount(bitboardWhite);
+            cout << "WHITE: " << cnt << endl;
+
+            cout << "DRAW!" << endl;
         }
     }
+    
+}
+
+void Bitboards::checkGameOver2()
+{
+    if (aiTwo->generateMoves(bitboardBlack, bitboardWhite) == 0 && aiOne->generateMoves(bitboardWhite, bitboardBlack) == 0)
+    {
+        s = GAME_OVER;
+        cout << "GAME OVER" << endl;
+        if (popCount(bitboardWhite) > popCount(bitboardBlack))
+        {
+            int cnt = 0;
+            cnt = popCount(bitboardBlack);
+            cout << "BLACK: " << cnt << endl;
+            cnt = popCount(bitboardWhite);
+            cout << "WHITE: " << cnt << endl;
+
+            cout << "WHITE WINS!" << endl;
+        }
+        else if (popCount(bitboardBlack) > popCount(bitboardWhite))
+        {
+
+            int cnt = 0;
+            cnt = popCount(bitboardBlack);
+            cout << "BLACK: " << cnt << endl;
+            cnt = popCount(bitboardWhite);
+            cout << "WHITE: " << cnt << endl;
+
+            cout << "BLACK WINS!" << endl;
+        }
+        else
+        {
+            int cnt = 0;
+            cnt = popCount(bitboardBlack);
+            cout << "BLACK: " << cnt << endl;
+            cnt = popCount(bitboardWhite);
+            cout << "WHITE: " << cnt << endl;
+
+            cout << "DRAW!" << endl;
+        }
+    }
+    
+    
 }
 
 int Bitboards::init()
 {
-    AIOne* aiOne = new AIOne();
-    AITwo* aiTwo = new AITwo();
+    aiOne = new AIOne();
+    aiTwo = new AITwo();
+
+    // aiTwo = new AIOne();
+    // aiOne = new AITwo();
+    
     game();
+    game2();
 
     return 0;
 }

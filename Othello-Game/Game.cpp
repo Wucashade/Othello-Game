@@ -1,5 +1,7 @@
 #include "Game.hpp"
 #include "Window.hpp"
+#include <thread>
+#include <unistd.h>
 
 
 
@@ -34,11 +36,19 @@ void Game::init()
 	boardTopLeftX = boardTopLeftY = 0;
 	board = new Board();
 	board->init();
-    playerOne = new Player(board -> bitboardBlack, board->popCount(board->bitboardBlack), 1);
-    playerTwo = new Player(board -> bitboardWhite, board->popCount(board->bitboardWhite), 0);
+    playerOne = new Player(board -> bitboardBlack, board->popCount(board->bitboardBlack), 0);
+    playerTwo = new Player(board -> bitboardWhite, board->popCount(board->bitboardWhite), 1);
 	if (playerOne->isPlayerHuman() == 1)
 	{
 		playerCanMove = 1;
+		cout << "BLACK MOVE" << endl;
+
+	}
+	else
+	{
+		playerCanMove = 0;
+		cout << "BLACK MOVE" << endl;
+		computerTurn(playerOne, playerTwo);
 	}
     
 }
@@ -88,59 +98,63 @@ void Game::handleMouseButtonDown(SDL_MouseButtonEvent& b)
 
 void Game::nextTurn()
 {
+	int turn = ((board->popCount(playerOne->pieceColour)+board->popCount(playerTwo->pieceColour))-4);
+	
+	cout<< "Turn: " << turn << endl;
+	
+
+
+
+	if(checkGameOver())
+	{
+		return;
+	}
+	
 	if(se == BLACK_MOVE)
 	{
-		se = WHITE_MOVE;
-		cout << "WHITE MOVE" << endl;
+		if (board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
+		{
+			cout << "WHITE HAS NO MOVES, BLACK MOVE" << endl;
+			switchPlayer(playerOne, playerTwo);
+		}
+		else{
+			cout << "WHITE MOVE" << endl;
+			se = WHITE_MOVE;
+			switchPlayer(playerTwo, playerOne);
+		}
 	}
 	else if(se == WHITE_MOVE)
 	{
+		if (board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0)
+		{
+			cout << "BLACK HAS NO MOVES, WHITE MOVE" << endl;
+			switchPlayer(playerTwo, playerOne);
+		}
+		else
+		{
+			cout << "BLACK MOVE" << endl;
+			se = BLACK_MOVE;
+			switchPlayer(playerOne, playerTwo);
+		}
 		
-		se = BLACK_MOVE;
-		cout << "BLACK MOVE" << endl;
 	}
-    if (board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0 && 
-        board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
-    {
-        se = GAME_OVER;
-        cout << "GAME OVER" << endl;
-        if (board->popCount(playerOne->pieceColour) > board->popCount(playerTwo->pieceColour))
-        {
-            cout << "BLACK WINS!" << endl;
-        }
-        else if (board->popCount(playerTwo->pieceColour) > board->popCount(playerOne->pieceColour))
-        {
-            cout << "WHITE WINS!" << endl;
-        }
-    } 
-    else if (se == BLACK_MOVE && board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0)
-    {
-        se = WHITE_MOVE;
-		cout << "BLACK HAS NO MOVES, WHITE MOVE" << endl;
-    }
-    else if (se == WHITE_MOVE && board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
-    {
-        se = BLACK_MOVE;
-		cout << "WHITE HAS NO MOVES, BLACK MOVE" << endl;
-    }
+	int blackMoves = board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour);
+	int whiteMoves = board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour);
+	int blackScore = board->popCount(playerOne->pieceColour);
+	int whiteScore = board->popCount(playerTwo->pieceColour);
+
+	cout<< "Black Score: " << blackScore << " White Score: " << whiteScore << endl;
+	cout<< "Black moves: " << board->popCount(blackMoves) << " White moves: " << board->popCount(whiteMoves) << endl;
+	
+}
+
+void Game::aiThread(Game* game)
+{
 
 	
+	game->computerTurn(game->playerOne, game->playerTwo);
+	return;
 
-	if(se == BLACK_MOVE && playerOne->isPlayerHuman() == 0)
-	{
-		playerCanMove = 0;
-		computerTurn(playerOne, playerTwo);
-	}
-	else if(se == WHITE_MOVE && playerTwo->isPlayerHuman() == 0)
-	{
-		playerCanMove = 0;
-		computerTurn(playerTwo, playerOne);
-	}
-	else
-	{
-		playerCanMove = 1;
-	}
-	
 }
 
 void Game::computerTurn(Player* currentPlayer, Player* opponentPlayer)
@@ -150,5 +164,47 @@ void Game::computerTurn(Player* currentPlayer, Player* opponentPlayer)
 	board->commitMove(&currentPlayer->pieceColour, &opponentPlayer->pieceColour, (row * 8 + col));
 	cout << "Computer made move at X: "<< row << " Y: " << col<<endl;
 	nextTurn();
+	
+}
 
+bool Game::checkGameOver()
+{
+	if (board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0 && 
+        board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
+    {
+        se = GAME_OVER;
+        cout << "GAME OVER" << endl;
+        if (board->popCount(playerOne->pieceColour) > board->popCount(playerTwo->pieceColour))
+        {
+            cout << "BLACK WINS!" << endl;
+			return 1;
+        }
+        else if (board->popCount(playerTwo->pieceColour) > board->popCount(playerOne->pieceColour))
+        {
+            cout << "WHITE WINS!" << endl;
+			return 1;
+        }
+		else
+		{
+			cout << "DRAW" << endl;
+			return 1;
+		}
+    }
+	return 0;
+}
+
+void Game::switchPlayer(Player* currentPlayer, Player* oppPlayer)
+{
+	if(currentPlayer->isPlayerHuman())
+	{
+		playerCanMove = 1;
+	}
+	else
+	{	
+		playerCanMove = 0;
+		thread engineThread(aiThread, this);
+		engineThread.join();
+
+		//computerTurn(currentPlayer, oppPlayer);
+	}
 }

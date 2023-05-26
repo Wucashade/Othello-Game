@@ -34,7 +34,7 @@ enum squares
   	h1, h2, h3, h4, h5, h6, h7, h8
 };
 
-U64 avoidWrap[8] =
+const U64 avoidWrap[8] =
     {
         0xfefefefefefefe00, // UP-LEFT
         0xfefefefefefefefe, // LEFT
@@ -46,16 +46,23 @@ U64 avoidWrap[8] =
         0xffffffffffffff00, // UP
 };
 
-int shift[8] = {9, 1, -7, -8, -9, -1, 7, 8};
+const int shift[8] = {9, 1, -7, -8, -9, -1, 7, 8};
 
-enum state
+const U64 squareDefinitions[8] =
 {
-    WHITE_MOVE,
-    BLACK_MOVE,
-    GAME_OVER
+    0x8100000000000081ULL, // Corner mask
+    0x4281000000008142ULL, //C squares mask
+    0x42000000004200ULL, // X squares mask
+    0x1800008181000018ULL,   // B squares mask
+    0x2400810000810024ULL,    // A squares mask
+    0x240000240000ULL,   // S squares mask
+    0x183C3C180000ULL, // Inner middle mask
+    0x3C424242423C00ULL   // Outer middle mask
 };
 
-state s;
+static int squareEarlyValues[8] = {30, -6, -15, -1, 0, 0, -1, -3};
+static int squareMidValues[8] = {50, -5, -20, 6, 10, 2, 1, -4};
+static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};
 
 
 void Board::init()
@@ -67,8 +74,6 @@ void Board::init()
 	SET_BIT(bitboardWhite, e5);
 	outlineColour = BLACK;
 	boxColour = BOARD_COLOUR;
-
-    s = BLACK_MOVE;
 
 	boxWidth = Window::windowWidth / BOARD_BOXES_X;
 	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
@@ -309,46 +314,6 @@ bool Board::handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* playerOne, Pl
         return 0;
     }
 }
-void Board::placeDisk(Player* playerOne, Player* playerTwo, int index)
-{
-    if(s == BLACK_MOVE && isValid(playerOne->pieceColour, 
-                        playerTwo->pieceColour, index) != 0)
-    {
-
-        commitMove(&playerOne->pieceColour, &playerTwo->pieceColour, index);
-        s = WHITE_MOVE;
-
-    }
-    if (generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0 && 
-        generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
-    {
-        s = GAME_OVER;
-        cout << "GAME OVER" << endl;
-        if (popCount(playerOne->pieceColour) > popCount(playerTwo->pieceColour))
-        {
-            cout << "BLACK WINS!" << endl;
-        }
-        else if (popCount(playerTwo->pieceColour) > popCount(playerOne->pieceColour))
-        {
-            cout << "WHITE WINS!" << endl;
-        }
-    }
-    else if (s == BLACK_MOVE && generateMoves(playerOne->pieceColour, playerTwo->pieceColour) == 0)
-    {
-        s = WHITE_MOVE;
-    }
-    else if (s == WHITE_MOVE && generateMoves(playerTwo->pieceColour, playerOne->pieceColour) == 0)
-    {
-        s = BLACK_MOVE;
-    }
-    if(s == WHITE_MOVE && isValid(playerTwo->pieceColour, 
-                        playerOne->pieceColour, index) != 0)
-    {
-
-        commitMove(&playerTwo->pieceColour, &playerOne->pieceColour, index);
-        s = BLACK_MOVE;
-    }
-}
 
 void Board::printBitboard(U64 bbOne, U64 bbTwo)
 {
@@ -404,13 +369,61 @@ void Board::printSingleBitboard(U64 bb)
          << "   a b c d e f g h" << endl; // Prints the file
 }
 
+void Board::frontierDisks(U64 bbOwn, U64 bbOpponent,
+                           U64 *myFront, U64 *oppFront)
+{
+        U64 emptyCells = ~(bbOwn | bbOpponent);
+        U64 x;
+        int dir;
+
+        *myFront = 0;
+        *oppFront = 0;
+
+        for (dir = 0; dir < 8; dir++) {
+                /* Check cells adjacent to empty cells. */
+                x = shiftOne(emptyCells, dir);
+                *myFront |= x & bbOwn;
+                *oppFront |= x & bbOpponent;
+        }
+}
+
+int Board::discSquareValue(U64 bbOwn, U64 bbOpponent)
+{
+
+    int value;
+    int discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
+
+    for(int i = 0; i<(sizeof(squareDefinitions)/sizeof(squareDefinitions[0])); i++)
+    {
+        U64 ownCheckedSquares = bbOwn &  squareDefinitions[i];
+        U64 oppCheckedSquares = bbOpponent &  squareDefinitions[i];
+        if(discsPlaced < 25)
+        {
+            value += popCount(ownCheckedSquares) * squareEarlyValues[i];
+            value -= popCount(oppCheckedSquares) * squareEarlyValues[i];
+        }
+        else if(discsPlaced < 45 && discsPlaced > 24)
+        {
+            value += popCount(ownCheckedSquares) * squareMidValues[i];
+            value -= popCount(oppCheckedSquares) * squareMidValues[i];
+        }
+        else
+        {
+            value += popCount(ownCheckedSquares) * squareEndValues[i];
+            value -= popCount(oppCheckedSquares) * squareEndValues[i];
+        }
+    }
+
+    return value;
+}
+
 int Board::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
 {
 
-    int ownCount, oppCount;
-    U64 ownCorners = bbOwn & CORNER_MASK;
-    U64 oppCorners = bbOpponent & CORNER_MASK;
+    int ownCount, oppCount, discsPlaced;
+    U64 myFront, oppFront;
     int value = 0;
+    U64 ownCheckedSquares, oppCheckedSquares;
 
     if (!ownMoves && !oppMoves)
     {
@@ -420,9 +433,29 @@ int Board::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
         return (ownCount - oppCount) * (1 << 20);
     }
 
-    value = value + ((popCount(ownCorners) - popCount(oppCorners)) * 20);
-    value = value + ((popCount(ownMoves) - popCount(oppMoves)) * 5);
-    value = value + ((rand() % 20) * 1);
+    frontierDisks(bbOwn, bbOpponent, &myFront, &oppFront);
+    discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
+    //EVALUATION FOR EARLY GAME
+    if(discsPlaced < 25)
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 20);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 80; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 40;  //FRONTIER
+    }
+    //EVALUATION FOR MID GAME
+    else if(discsPlaced < 45 && discsPlaced > 24)
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 40);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 60; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 70;  //FRONTIER
+    }
+    //EVALUATION FOR END GAME
+    else
+    {
+        value += (discSquareValue(bbOwn, bbOpponent) * 50);  //POSITION
+        value += (popCount(ownMoves) - popCount(oppMoves)) * 20; //MOBILITY
+        value += (popCount(myFront) - popCount(oppFront)) * 20;  //FRONTIER
+    }
 
     return value;
 }
@@ -459,7 +492,7 @@ int Board::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
         oppNewDisks = bbOpponent;
         commitMove(&ownNewDisks, &oppNewDisks, i);
 
-        int a = -searchMove(bbOpponent, bbOwn, maxDepth - 1, -beta, -alpha,
+        int a = -searchMove(oppNewDisks, ownNewDisks, maxDepth - 1, -beta, -alpha,
                             NULL, evalCount);
 
         if (a > best)
@@ -503,11 +536,20 @@ void Board::computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
 {
     int move_idx;
 
-    static const int START_DEPTH = 8;
-    static const int EVAL_BUDGET = 10000;
+    int startDepth;
+
+    if((popCount(bbOwn) + popCount(bbOpponent)) > 45)
+    {
+        startDepth = 12;
+    }
+    else
+    {
+        startDepth = 8;
+    }
+    static const int evaluationBudget = 500000;
 
     move_idx = iterativeSearchMove(bbOwn, bbOpponent,
-                                   START_DEPTH, EVAL_BUDGET);
+                                   startDepth, evaluationBudget);
 
     cout << move_idx << endl;
 

@@ -16,15 +16,17 @@ class AIOne
 
     AIOne();
 
-
-    U64 shiftOne(U64 bb, int dir8);
-    int popCount(U64 bb);
-    U64 generateMoves(U64 bbOwn, U64 bbOpponent);
+    static U64 shiftOne(U64 bb, int dir8);
+    static int popCount(U64 bb);
+    static U64 generateMoves(U64 bbOwn, U64 bbOpponent);
     bool isValid(U64 bbOwn, U64 bbOpponent, int index);
-    void commitMove(U64 *bbOwn, U64 *bbOpponent, int index);
-    int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves);
-    int searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evalCount);
-    int iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent, int startDepth, int evalBudget);
-    void computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col);
+    static void commitMove(AIOne* aiOne, U64 *bbOwn, U64 *bbOpponent, int index);
+    static int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves);
+    static void frontierDisks(U64 bbOwn, U64 bbOpponent, U64 *myFront, U64 *oppFront);
+    static int discSquareValue(U64 bbOwn, U64 bbOpponent);
+    static int searchMove(AIOne* aiOne, U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evalCount);
+    static int iterativeSearchMove(AIOne* aiOne, U64 &bbOwn, U64 &bbOpponent, int startDepth, int evalBudget);
+    static void computeMove(AIOne* aiOne, U64 &bbOwn, U64 &bbOpponent, int *row, int *col);
+
 
 };
