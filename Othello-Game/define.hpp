@@ -2,7 +2,7 @@
 
 using namespace std;
 
-#define BOARD_BOXES_X 8
+#define BOARD_BOXES_X 11
 #define BOARD_BOXES_Y 8
 
 #define SCREEN_HEIGHT 400

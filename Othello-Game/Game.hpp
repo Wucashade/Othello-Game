@@ -1,5 +1,7 @@
 #include "define.hpp"
 #include <SDL.h>
+#include <SDL_image.h>
+#include <SDL_ttf.h>
 #include "Board.hpp"
 #include "Player.hpp"
 #include <thread>
@@ -18,6 +20,7 @@ class Game
 
 		void init();
 		void render();
+		void renderMainMenu();
 		void update();
 		void resize();
 		
@@ -37,17 +40,29 @@ class Game
 
 		enum state
 		{
+			MAIN_MENU,
 			WHITE_MOVE,
 			BLACK_MOVE,
 			GAME_OVER
 		};
-		state se = BLACK_MOVE;
+		state se = MAIN_MENU;
+
+		bool pVPTrue = 0;
+		bool pVCTrue = 0;
+		bool playerColourBlack = 1;
+		bool difficultyOneTrue = 0;
+		bool difficultyTwoTrue = 0;
+		bool difficultyThreeTrue = 0;
+
+		
 
 
 	private:
 
-	
-		
+
+		int mainBoxWidth;
+		int mainBoxHeight;
+
 		Board* board;
 		Player* playerOne;
 		Player* playerTwo;

@@ -1,8 +1,10 @@
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <iostream>
 #include "define.hpp"
 #include "Player.hpp"
+#include <string>
 #pragma once
 
 typedef uint64_t U64;
@@ -16,6 +18,7 @@ public:
 
 	void init();
 	void renderBoard();
+	void renderMenu(U64 bbOne, U64 bbTwo);
 	void render(U64 bbOne, U64 bbTwo);
 	void update();
 	void resize();

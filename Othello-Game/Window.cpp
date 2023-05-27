@@ -3,6 +3,7 @@
 SDL_Renderer* Window::renderer = nullptr;
 
 
+
 using namespace std;
 
 int Window::windowHeight = 0;
@@ -26,6 +27,7 @@ void Window::init(const char* title, int positionX, int positionY)
     if (SDL_Init(SDL_INIT_EVERYTHING) == 0) {
 
         cout << "Subsystems Initialised" << endl;
+        TTF_Init();
         calculateWindowDimensions();
 
         window = SDL_CreateWindow(title, positionX, positionY, Window::windowHeight, Window::windowWidth, SDL_WINDOW_RESIZABLE);
@@ -44,6 +46,9 @@ void Window::init(const char* title, int positionX, int positionY)
             cout << "Renderer Created" << endl;
 
         }
+
+        
+        
 
         isRunning = true;
 
@@ -110,7 +115,7 @@ void Window::eventManager()
 void Window::render() 
 {
     //Renders all the graphics
-    SDL_SetRenderDrawColor(renderer, 211, 211, 211, 255);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
     SDL_RenderClear(renderer);
 

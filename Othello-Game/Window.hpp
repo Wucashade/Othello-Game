@@ -1,5 +1,6 @@
 #include <iostream>
 #include <SDL.h>
+#include <SDL_ttf.h>
 #include <string>
 #include "define.hpp"
 #include "Game.hpp"
@@ -31,6 +32,7 @@ private:
     bool frozen;
     SDL_Window* window;
     Game* game;
+    
     
 
 };

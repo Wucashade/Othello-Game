@@ -1,13 +1,13 @@
 #include "Board.hpp"
 #include "Window.hpp"
 
+
+
 #define GET_BIT(bb, square) (bb & (1ULL << square))
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
 
 
 #define CORNER_MASK 0x8100000000000081ULL
-
-
 
 Board::Board()
 {
@@ -75,8 +75,9 @@ void Board::init()
 	outlineColour = BLACK;
 	boxColour = BOARD_COLOUR;
 
-	boxWidth = Window::windowWidth / BOARD_BOXES_X;
-	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
+	boxWidth = (Window::windowWidth) / BOARD_BOXES_X+2;
+	boxHeight = (Window::windowHeight) / BOARD_BOXES_Y+2;
+
 
 }
 
@@ -87,7 +88,7 @@ void Board::renderBoard()
 	boardBuild.w = boxWidth;
 	boardBuild.h = boxHeight;
 
-	for (int i = 0; i < BOARD_BOXES_X; i++) 
+	for (int i = 3; i < BOARD_BOXES_X; i++) 
 	{
 		for (int j = 0; j < BOARD_BOXES_Y; j++) 
 		{
@@ -98,15 +99,97 @@ void Board::renderBoard()
 
 			
 			SDL_SetRenderDrawColor(Window::renderer, outlineColour.r, outlineColour.g, outlineColour.b, outlineColour.a);
-			SDL_RenderDrawRect(Window::renderer, &boardBuild);
+            SDL_RenderDrawRect(Window::renderer, &boardBuild);
 		
 		}
 	}
+
+    
+}
+
+void Board::renderMenu(U64 bbOne, U64 bbTwo)
+{
+
+    SDL_Rect statsBuild;
+    SDL_Surface* surface;
+    SDL_Rect blackScore;
+    SDL_Rect whiteScore;
+    SDL_Rect homeButton;
+    SDL_Texture* words;
+    SDL_Color black = {0,0,0};
+
+    TTF_Font* globalFont = TTF_OpenFont("fonts/oswald/Oswald-Bold.ttf", 24);
+
+    //CREATING TEXT FOR SCORES
+
+    string blackScoreText = to_string(popCount(bbOne));
+    string blackText = "BLACK: " + blackScoreText;
+    string whiteScoreText = to_string(popCount(bbTwo));
+    string whiteText = "WHITE: " + whiteScoreText;
+
+     //DEFINE AREA FOR SIDE MENU
+
+    statsBuild.w = boxWidth*3;
+    statsBuild.h = boxHeight*8;
+    statsBuild.x = Game::boardTopLeftX;
+    statsBuild.y = Game::boardTopLeftY;
+
+    //DRAW SIDE MENU
+
+    SDL_SetRenderDrawColor(Window::renderer, 169,169,169, 0);
+	SDL_RenderFillRect(Window::renderer, &statsBuild);
+
+    //DEFINE AREA FOR HOME BUTTON
+
+    homeButton.w = boxWidth*2;
+    homeButton.h = boxHeight;
+    homeButton.x = Game::boardTopLeftX + 0.5 * boxWidth;
+    homeButton.y = Game::boardTopLeftY;
+
+    //DEFINE AREA FOR BLACK SCORE
+
+    blackScore.w = boxWidth*2.5;
+    blackScore.h = boxHeight;
+    blackScore.x = Game::boardTopLeftX + 0.2 * boxWidth;
+    blackScore.y = Game::boardTopLeftY + 3 * boxHeight;
+
+    //DEFINE AREA FOR WHITE SCORE
+
+    whiteScore.w = boxWidth*2.5;
+    whiteScore.h = boxHeight;
+    whiteScore.x = Game::boardTopLeftX + 0.2 * boxWidth;
+    whiteScore.y = Game::boardTopLeftY + 5 * boxWidth;
+
+    //DISPLAY HOME BUTTON
+
+    surface = TTF_RenderText_Solid(globalFont, "HOME", black);
+    words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+    SDL_SetRenderDrawColor(Window::renderer, outlineColour.r, outlineColour.g, outlineColour.b, outlineColour.a);
+    SDL_RenderDrawRect(Window::renderer, &homeButton);
+    SDL_RenderCopy(Window::renderer, words, NULL, &homeButton);
+    SDL_FreeSurface(surface);
+
+    //DISPLAY BLACK SCORE
+
+    surface = TTF_RenderText_Solid(globalFont, blackText.c_str(), black);
+    words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+    SDL_RenderCopy(Window::renderer, words, NULL, &blackScore);
+    SDL_FreeSurface(surface);
+    
+
+    //DISPLAY WHITE SCORE
+
+    surface = TTF_RenderText_Solid(globalFont, whiteText.c_str(), black);
+    words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+    SDL_RenderCopy(Window::renderer, words, NULL, &whiteScore);
+    SDL_FreeSurface(surface);
+
 }
 
 void Board::render(U64 bbOne, U64 bbTwo) 
 {
 	renderBoard();
+    renderMenu(bbOne, bbTwo);
 	renderDisks(bbOne, bbTwo);
 
 }
@@ -146,18 +229,18 @@ int Board::getHeight()
 void Board::renderDisks(U64 bbOne, U64 bbTwo) 
 {
 
-	for (int i = 0; i < BOARD_BOXES_X; i++) 
+	for (int i = 0; i < BOARD_BOXES_X-3; i++) 
 		{
 			for (int j = 0; j < BOARD_BOXES_Y; j++) 
 			{
 				int square = i * 8 + j;
 				if(GET_BIT(bbOne, square))
 				{
-					drawImage("disctextures/blackdisc.png", i, j);
+					drawImage("disctextures/blackdisc.png", i+3, j);
 				}
 				else if (GET_BIT(bbTwo, square))
 				{
-					drawImage("disctextures/whitedisc.png", i, j);
+					drawImage("disctextures/whitedisc.png", i+3, j);
 				}
 			}
 		}
@@ -295,7 +378,7 @@ bool Board::handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* playerOne, Pl
         int x, y, boardX, boardY;
 	    SDL_GetMouseState(&x, &y);
 
-        boardX = (x - Game::boardTopLeftX) / boxWidth;
+        boardX = ((x - Game::boardTopLeftX) / boxWidth)-3;
         boardY = (y - Game::boardTopLeftY) / boxHeight;
         int index = boardX * 8 + boardY;
         cout << "board clicked at X: " << boardX << " Y: " << boardY<<endl;
