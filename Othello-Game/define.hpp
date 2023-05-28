@@ -6,7 +6,7 @@ using namespace std;
 #define BOARD_BOXES_Y 8
 
 #define SCREEN_HEIGHT 400
-#define SCREEN_WIDTH 400
+#define SCREEN_WIDTH 550
 
 #define BOARD_COLOUR {0,250,154,0}
 #define PIECE_BLACK_COLOUR {0,0,0,0}

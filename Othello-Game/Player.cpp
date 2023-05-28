@@ -8,6 +8,8 @@ Player::Player(U64 bitboard, int diskNum, bool isHumanPlayer)
 
 };
 
+Player::~Player(){};
+
 U64 Player::getBitboard()
 {
     return pieceColour;

@@ -7,14 +7,11 @@
 #define SET_BIT(bb, square) (bb |= (1ULL << square))
 
 
-#define CORNER_MASK 0x8100000000000081ULL
-
 Board::Board()
 {
     bool moveMade;
-    U64 bitboardWhite = 0ULL;
-    U64 bitboardBlack = 0ULL;
-
+    U64 bitboardWhite;
+    U64 bitboardBlack;
 };
 
 Board::~Board()
@@ -60,7 +57,7 @@ const U64 squareDefinitions[8] =
     0x3C424242423C00ULL   // Outer middle mask
 };
 
-static int squareEarlyValues[8] = {30, -6, -15, -1, 0, 0, -1, -3};
+static int squareEarlyValues[8] = {30, -6, -15, -1, 5, 5, -1, -3};
 static int squareMidValues[8] = {50, -5, -20, 6, 10, 2, 1, -4};
 static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};
 
@@ -68,10 +65,10 @@ static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};
 void Board::init()
 {
 	
-	SET_BIT(bitboardBlack, d5);
-	SET_BIT(bitboardBlack, e4);
-	SET_BIT(bitboardWhite, d4);
-	SET_BIT(bitboardWhite, e5);
+	// SET_BIT(bitboardBlack, d5);
+	// SET_BIT(bitboardBlack, e4);
+	// SET_BIT(bitboardWhite, d4);
+	// SET_BIT(bitboardWhite, e5);
 	outlineColour = BLACK;
 	boxColour = BOARD_COLOUR;
 
@@ -141,9 +138,9 @@ void Board::renderMenu(U64 bbOne, U64 bbTwo)
 
     //DEFINE AREA FOR HOME BUTTON
 
-    homeButton.w = boxWidth*2;
+    homeButton.w = boxWidth*3;
     homeButton.h = boxHeight;
-    homeButton.x = Game::boardTopLeftX + 0.5 * boxWidth;
+    homeButton.x = Game::boardTopLeftX;
     homeButton.y = Game::boardTopLeftY;
 
     //DEFINE AREA FOR BLACK SCORE
@@ -183,6 +180,10 @@ void Board::renderMenu(U64 bbOne, U64 bbTwo)
     words = SDL_CreateTextureFromSurface(Window::renderer, surface);
     SDL_RenderCopy(Window::renderer, words, NULL, &whiteScore);
     SDL_FreeSurface(surface);
+
+    TTF_CloseFont( globalFont );
+    globalFont = NULL;
+    SDL_DestroyTexture(words);
 
 }
 
@@ -258,12 +259,12 @@ void Board::drawImage(const string& imagePath, int x, int y)
 	{
 		cout << SDL_GetError() << endl;
 	}
-	SDL_Texture* disk = SDL_CreateTextureFromSurface(Window::renderer, surface);
-	if(!disk)
+	SDL_Texture* disc = SDL_CreateTextureFromSurface(Window::renderer, surface);
+	if(!disc)
 	{
 		cout << SDL_GetError() << endl;
 	}
-	SDL_QueryTexture(disk, NULL, NULL, &w, &h);
+	SDL_QueryTexture(disc, NULL, NULL, &w, &h);
 	rectOne.w = w;
 	rectOne.h = h;
 	rectOne.x = rectOne.y = 0;
@@ -274,13 +275,14 @@ void Board::drawImage(const string& imagePath, int x, int y)
 	rectTwo.h = boxHeight;
 
 
-	SDL_RenderCopy(Window::renderer, disk, &rectOne, &rectTwo);
+	SDL_RenderCopy(Window::renderer, disc, &rectOne, &rectTwo);
 	SDL_FreeSurface(surface);
+    SDL_DestroyTexture(disc);
 }
 
 U64 Board::shiftOne(U64 bb, int dir8)
 {
-    if (dir8 < 0 || dir8 > 7) // Check to make sure that the direction exists in the array§
+    if (dir8 < 0 || dir8 > 7) // Check to make sure that the direction exists in the array
     {
         cout << "Invalid direction" << endl;
     }
@@ -310,21 +312,21 @@ int Board::popCount(U64 bb)
 U64 Board::generateMoves(U64 bbOwn, U64 bbOpponent)
 {
     U64 emptyBB = ~(bbOwn | bbOpponent);
-    U64 moves;
+    U64 flood;
     U64 legalMoves = 0;
 
     for (int i = 0; i < 8; i++)
     {
 
-        moves = shiftOne(bbOwn, i) & bbOpponent;
+        flood = shiftOne(bbOwn, i) & bbOpponent;
 
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
-        moves |= shiftOne(moves, i) & bbOpponent;
+        flood |= shiftOne(flood, i) & bbOpponent;
+        flood |= shiftOne(flood, i) & bbOpponent;
+        flood |= shiftOne(flood, i) & bbOpponent;
+        flood |= shiftOne(flood, i) & bbOpponent;
+        flood |= shiftOne(flood, i) & bbOpponent;
 
-        legalMoves |= shiftOne(moves, i) & emptyBB;
+        legalMoves |= shiftOne(flood, i) & emptyBB;
     }
 
     return legalMoves;
@@ -634,7 +636,6 @@ void Board::computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
     move_idx = iterativeSearchMove(bbOwn, bbOpponent,
                                    startDepth, evaluationBudget);
 
-    cout << move_idx << endl;
 
     *row = move_idx / 8;
     *col = move_idx % 8;

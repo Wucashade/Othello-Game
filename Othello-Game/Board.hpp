@@ -47,8 +47,8 @@ public:
 	SDL_Color boxColour;
 
 
-	U64 bitboardWhite;
-	U64 bitboardBlack;
+	U64 bitboardWhite = 0x1008000000ULL;
+	U64 bitboardBlack = 0x810000000ULL;
 
 	bool moveMade;
 

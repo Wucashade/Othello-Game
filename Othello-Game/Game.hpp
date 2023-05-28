@@ -19,13 +19,16 @@ class Game
 		~Game();
 
 		void init();
+		void initGame();
 		void render();
+		void renderGameOver();
 		void renderMainMenu();
 		void update();
 		void resize();
 		
 		void handleMouseButtonDown(SDL_MouseButtonEvent& b);
 		void computerMove();
+		void stats();
 		void nextTurn();
 		static void aiThread(Game* game);
 		void computerTurn(Player* currentPlayer, Player* opponentPlayer);

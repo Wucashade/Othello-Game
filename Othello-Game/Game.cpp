@@ -2,6 +2,7 @@
 #include "Window.hpp"
 #include <thread>
 #include <unistd.h>
+#include <fstream>
 
 
 
@@ -45,31 +46,50 @@ void Game::init()
 
 	mainBoxWidth =  (Window::windowWidth) / 11;
 	mainBoxHeight = (Window::windowHeight) / 11;
-
-	
-
-
-	
-	
 	/*
+	
+	*/
+    
+}
+
+void Game::initGame()
+{
+	se = BLACK_MOVE;
 	board = new Board();
 	board->init();
-    playerOne = new Player(board -> bitboardBlack, board->popCount(board->bitboardBlack), 0);
-    playerTwo = new Player(board -> bitboardWhite, board->popCount(board->bitboardWhite), 1);
+	if(pVCTrue)
+	{
+		if(playerColourBlack)
+		{
+			playerOne = new Player(board -> bitboardBlack, board->popCount(board->bitboardBlack), 1);
+    		playerTwo = new Player(board -> bitboardWhite, board->popCount(board->bitboardWhite), 0);
+		}
+		else
+		{
+			playerOne = new Player(board -> bitboardBlack, board->popCount(board->bitboardBlack), 0);
+    		playerTwo = new Player(board -> bitboardWhite, board->popCount(board->bitboardWhite), 1);
+		}
+	}
+	else
+	{
+		playerOne = new Player(board -> bitboardBlack, board->popCount(board->bitboardBlack), 1);
+    	playerTwo = new Player(board -> bitboardWhite, board->popCount(board->bitboardWhite), 1);
+	}
+    
 	if (playerOne->isPlayerHuman() == 1)
 	{
+		stats();
 		playerCanMove = 1;
 		cout << "BLACK MOVE" << endl;
 
 	}
 	else
 	{
+		stats();
 		playerCanMove = 0;
 		cout << "BLACK MOVE" << endl;
 		computerTurn(playerOne, playerTwo);
 	}
-	*/
-    
 }
 
 void Game::renderMainMenu()
@@ -325,10 +345,92 @@ void Game::renderMainMenu()
 		SDL_RenderDrawRect(Window::renderer, &difficultyThree);
 		SDL_RenderCopy(Window::renderer, words, NULL, &difficultyThree);
 		SDL_FreeSurface(surface);
+
+		TTF_CloseFont( globalFont );
+    	globalFont = NULL;
+		SDL_DestroyTexture(words);
 	}
 
 
 
+}
+
+void Game::renderGameOver()
+{
+	SDL_Rect gameOverText;
+	SDL_Rect gameOverText2;
+	SDL_Rect gameOverBackground;
+	SDL_Rect victor;
+	SDL_Rect score;
+	SDL_Surface* surface;
+	SDL_Texture* words;
+    string scoreText =  to_string(board->popCount(playerOne->pieceColour)) + " - " + to_string(board->popCount(playerTwo->pieceColour));
+	SDL_Color white = {255,255,255};
+
+	TTF_Font* globalFont = TTF_OpenFont("fonts/oswald/Oswald-Bold.ttf", 24);
+
+	gameOverBackground.w = mainBoxWidth * 11;
+	gameOverBackground.h = mainBoxHeight * 6;
+	gameOverBackground.x = boardTopLeftX;
+	gameOverBackground.y = boardTopLeftY + 4 * mainBoxHeight;
+
+	gameOverText.w = mainBoxWidth * 7;
+	gameOverText.h = mainBoxHeight;
+	gameOverText.x = boardTopLeftX + 2 * mainBoxWidth;
+	gameOverText.y = boardTopLeftY + 4 * mainBoxHeight;
+
+	victor.w = mainBoxWidth * 3;
+	victor.h = mainBoxHeight;
+	victor.x = boardTopLeftX + 4 * mainBoxWidth;
+	victor.y = boardTopLeftY + 5 * mainBoxHeight;
+
+	score.w = mainBoxWidth * 5;
+	score.h = mainBoxHeight;
+	score.x = boardTopLeftX + 3 * mainBoxWidth;
+	score.y = boardTopLeftY + 6 * mainBoxHeight;
+
+	gameOverText2.w = mainBoxWidth * 9;
+	gameOverText2.h = mainBoxHeight;
+	gameOverText2.x = boardTopLeftX + 1 * mainBoxWidth;
+	gameOverText2.y = boardTopLeftY + 8 * mainBoxHeight;
+
+	SDL_SetRenderDrawColor(Window::renderer, 0, 0, 0, 0);
+	SDL_RenderFillRect(Window::renderer, &gameOverBackground);
+
+	surface = TTF_RenderText_Solid(globalFont, "GAME OVER", white);
+	words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+	SDL_RenderCopy(Window::renderer, words, NULL, &gameOverText);
+	SDL_FreeSurface(surface);
+
+	if(board->popCount(playerOne->pieceColour) > board->popCount(playerTwo->pieceColour))
+	{
+		surface = TTF_RenderText_Solid(globalFont, "BLACK WINS", white);
+	}
+	else if(board->popCount(playerTwo->pieceColour) > board->popCount(playerOne->pieceColour))
+	{
+		surface = TTF_RenderText_Solid(globalFont, "WHITE WINS", white);
+	}
+	else
+	{
+		surface = TTF_RenderText_Solid(globalFont, "DRAW", white);
+	}
+	words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+	SDL_RenderCopy(Window::renderer, words, NULL, &victor);
+	SDL_FreeSurface(surface);
+
+	surface = TTF_RenderText_Solid(globalFont, scoreText.c_str(), white);
+	words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+	SDL_RenderCopy(Window::renderer, words, NULL, &score);
+	SDL_FreeSurface(surface);
+	
+	surface = TTF_RenderText_Solid(globalFont, "PRESS ANYWHERE TO CONTINUE", white);
+	words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+	SDL_RenderCopy(Window::renderer, words, NULL, &gameOverText2);
+	SDL_FreeSurface(surface);
+
+	TTF_CloseFont( globalFont );
+	SDL_DestroyTexture(words);
+    globalFont = NULL;
 }
 
 void Game::render() 
@@ -336,6 +438,10 @@ void Game::render()
 	if(se != MAIN_MENU)
 	{
 		board->render(playerOne->getBitboard(), playerTwo->getBitboard());
+		if(se == GAME_OVER)
+		{
+			renderGameOver();
+		}
 	}
 	else
 	{
@@ -350,6 +456,17 @@ void Game::update()
 
 void Game::resize() 
 {
+	mainBoxWidth = Window::windowWidth / 11;
+	mainBoxHeight = Window::windowHeight / 11;
+	if (mainBoxWidth > mainBoxHeight) 
+	{
+		mainBoxWidth = mainBoxHeight;
+	}
+	else 
+	{
+		mainBoxHeight = mainBoxWidth;
+	}
+	
 	
 	if(se != MAIN_MENU)
 	{
@@ -360,17 +477,6 @@ void Game::resize()
 	}
 	else
 	{
-		mainBoxWidth = Window::windowWidth / 11;
-		mainBoxHeight = Window::windowHeight / 11;
-
-		if (mainBoxWidth > mainBoxHeight) {
-
-			mainBoxWidth = mainBoxHeight;
-		}
-		else 
-		{
-			mainBoxHeight = mainBoxWidth;
-		}
 		boardTopLeftX = (Window::windowWidth - (11 * mainBoxWidth)) /2;
 		boardTopLeftY = (Window::windowHeight - (11 * mainBoxHeight)) /2;
 	}
@@ -414,7 +520,7 @@ void Game::handleMouseButtonDown(SDL_MouseButtonEvent& b)
 			}
 			else if((boardX > 2 && boardX < 8) && boardY == 10)
 			{
-				cout<<"hi";
+				initGame();
 			}
 			else if(pVCTrue == 1)
 			{
@@ -473,7 +579,7 @@ void Game::handleMouseButtonDown(SDL_MouseButtonEvent& b)
 
 	}
 
-	if(playerCanMove == 1 && se == BLACK_MOVE)
+	else if(playerCanMove == 1 && se == BLACK_MOVE)
 	{
     	moveMade = board -> handleMouseButtonDown(b, playerOne, playerTwo); 
 		if(moveMade == 1)
@@ -493,17 +599,65 @@ void Game::handleMouseButtonDown(SDL_MouseButtonEvent& b)
 			nextTurn();
 		}
 	}
+	else if(se == GAME_OVER)
+	{
+		if(b.button == SDL_BUTTON_LEFT)
+		{
+			se = MAIN_MENU;
+			delete(board);
+			delete(playerOne);
+			delete(playerTwo);
+		}
+	}
+	if(se != MAIN_MENU)
+	{
+		if(b.button == SDL_BUTTON_LEFT ){
+			int x, y, boardX, boardY;
+			SDL_GetMouseState(&x, &y);
+			boardX = (x - boardTopLeftX) / mainBoxWidth;
+			boardY = (y - boardTopLeftY) / mainBoxHeight;
+
+			if(boardX < 3 && boardY == 0)
+			{
+				se = MAIN_MENU;
+				delete(board);
+				delete(playerOne);
+				delete(playerTwo);
+			}
+		}
+	}
+	//else if(GAME_OVER || )
+}
+
+void Game::stats()
+{
+	int turn = ((board->popCount(playerOne->pieceColour)+board->popCount(playerTwo->pieceColour))-3);
+	
+	cout<< "Turn: " << turn << endl;
+
+
+	U64 blackMoves = board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour);
+	U64 whiteMoves = board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour);
+	int blackScore = board->popCount(playerOne->pieceColour);
+	int whiteScore = board->popCount(playerTwo->pieceColour);
+
+	cout<< "Black Score: " << blackScore << " White Score: " << whiteScore << endl;
+	cout<< "Black moves: " << board->popCount(blackMoves) << " White moves: " << board->popCount(whiteMoves) << endl;
+
+	
+	ofstream resultsFile;
+  	resultsFile.open ("results.txt", ios::out);
+
+	if (resultsFile.is_open()) { cout << "hi" << endl; }
+	resultsFile << "hi \n";
+  	resultsFile << turn << " " << blackScore << " " << whiteScore << " " << board->popCount(blackMoves) << " " << board->popCount(whiteMoves) << "\n" ;
+  	resultsFile.close();
 }
 
 void Game::nextTurn()
 {
-	int turn = ((board->popCount(playerOne->pieceColour)+board->popCount(playerTwo->pieceColour))-4);
+	stats();
 	
-	cout<< "Turn: " << turn << endl;
-	
-
-
-
 	if(checkGameOver())
 	{
 		return;
@@ -537,21 +691,21 @@ void Game::nextTurn()
 		}
 		
 	}
-	int blackMoves = board->generateMoves(playerOne->pieceColour, playerTwo->pieceColour);
-	int whiteMoves = board->generateMoves(playerTwo->pieceColour, playerOne->pieceColour);
-	int blackScore = board->popCount(playerOne->pieceColour);
-	int whiteScore = board->popCount(playerTwo->pieceColour);
-
-	cout<< "Black Score: " << blackScore << " White Score: " << whiteScore << endl;
-	cout<< "Black moves: " << board->popCount(blackMoves) << " White moves: " << board->popCount(whiteMoves) << endl;
 	
 }
 
 void Game::aiThread(Game* game)
 {
 
+	if(game->playerOne->isPlayerHuman() == 0)
+	{
+		game->computerTurn(game->playerOne, game->playerTwo);
+	}
+	else
+	{
+		game->computerTurn(game->playerTwo, game->playerOne);
+	}
 	
-	game->computerTurn(game->playerOne, game->playerTwo);
 	return;
 
 }

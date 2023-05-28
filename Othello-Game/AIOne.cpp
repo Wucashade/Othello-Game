@@ -74,7 +74,7 @@ static U64 squareDefinitions[8] =
     0x3C424242423C00ULL   // Outer middle mask
 };
 
-static int squareEarlyValues[8] = {30, -6, -15, -1, 0, 0, -1, -3}; //{30, -12, -15, -1, 0, 0, -1, -3}
+static int squareEarlyValues[8] = {30, -6, -15, -1, 5, 5, -1, -3}; //{30, -12, -15, -1, 0, 0, -1, -3}
 static int squareMidValues[8] = {50, -5, -20, 6, 10, 2, 1, -4};    //{50, -10, -20, 6, 10, 2, 1, -4}
 static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};    //{100, -25, -25, 5, 10, 5, 2, 1}
 
