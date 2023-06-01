@@ -1,5 +1,6 @@
 #include "Board.hpp"
 #include "Window.hpp"
+#include "Game.hpp"
 
 
 
@@ -64,22 +65,18 @@ static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};
 
 void Board::init()
 {
-	
-	// SET_BIT(bitboardBlack, d5);
-	// SET_BIT(bitboardBlack, e4);
-	// SET_BIT(bitboardWhite, d4);
-	// SET_BIT(bitboardWhite, e5);
+
 	outlineColour = BLACK;
 	boxColour = BOARD_COLOUR;
 
 	boxWidth = (Window::windowWidth) / BOARD_BOXES_X+2;
 	boxHeight = (Window::windowHeight) / BOARD_BOXES_Y+2;
 
-
 }
 
 void Board::renderBoard() 
 {
+
 
 	SDL_Rect boardBuild;
 	boardBuild.w = boxWidth;
@@ -104,7 +101,7 @@ void Board::renderBoard()
     
 }
 
-void Board::renderMenu(U64 bbOne, U64 bbTwo)
+void Board::renderMenu(Player* playerOne, Player* playerTwo, string currentTurn)
 {
 
     SDL_Rect statsBuild;
@@ -112,16 +109,18 @@ void Board::renderMenu(U64 bbOne, U64 bbTwo)
     SDL_Rect blackScore;
     SDL_Rect whiteScore;
     SDL_Rect homeButton;
+    SDL_Rect whosTurn;
     SDL_Texture* words;
     SDL_Color black = {0,0,0};
+    SDL_Color white = {255,255,255};
 
     TTF_Font* globalFont = TTF_OpenFont("fonts/oswald/Oswald-Bold.ttf", 24);
 
     //CREATING TEXT FOR SCORES
 
-    string blackScoreText = to_string(popCount(bbOne));
+    string blackScoreText = to_string(popCount(playerOne->getBitboard()));
     string blackText = "BLACK: " + blackScoreText;
-    string whiteScoreText = to_string(popCount(bbTwo));
+    string whiteScoreText = to_string(popCount(playerTwo->getBitboard()));
     string whiteText = "WHITE: " + whiteScoreText;
 
      //DEFINE AREA FOR SIDE MENU
@@ -148,14 +147,21 @@ void Board::renderMenu(U64 bbOne, U64 bbTwo)
     blackScore.w = boxWidth*2.5;
     blackScore.h = boxHeight;
     blackScore.x = Game::boardTopLeftX + 0.2 * boxWidth;
-    blackScore.y = Game::boardTopLeftY + 3 * boxHeight;
+    blackScore.y = Game::boardTopLeftY + 2 * boxHeight;
 
     //DEFINE AREA FOR WHITE SCORE
 
     whiteScore.w = boxWidth*2.5;
     whiteScore.h = boxHeight;
     whiteScore.x = Game::boardTopLeftX + 0.2 * boxWidth;
-    whiteScore.y = Game::boardTopLeftY + 5 * boxWidth;
+    whiteScore.y = Game::boardTopLeftY + 4 * boxWidth;
+
+    //DEFINE AREA FOR WHO'S TURN
+
+    whosTurn.w = boxWidth*2.5;
+    whosTurn.h = boxHeight;
+    whosTurn.x = Game::boardTopLeftX + 0.2 * boxWidth;
+    whosTurn.y = Game::boardTopLeftY + 6 * boxWidth;
 
     //DISPLAY HOME BUTTON
 
@@ -176,10 +182,30 @@ void Board::renderMenu(U64 bbOne, U64 bbTwo)
 
     //DISPLAY WHITE SCORE
 
-    surface = TTF_RenderText_Solid(globalFont, whiteText.c_str(), black);
+    surface = TTF_RenderText_Solid(globalFont, whiteText.c_str(), white);
     words = SDL_CreateTextureFromSurface(Window::renderer, surface);
     SDL_RenderCopy(Window::renderer, words, NULL, &whiteScore);
     SDL_FreeSurface(surface);
+
+    //DISPLAY WHO'S TURN
+    if(currentTurn == "BLACK" && playerOne->isPlayerHuman() == 1)
+    {
+        surface = TTF_RenderText_Solid_Wrapped(globalFont, "BLACK PLAYER MOVE", black, boxWidth*2.5);
+    }
+    else if(currentTurn == "WHITE"  && playerTwo->isPlayerHuman() == 1)
+    {
+        surface = TTF_RenderText_Solid_Wrapped(globalFont, "WHITE PLAYER MOVE", white, boxWidth*2.5);
+    }
+    else
+    {
+        surface = TTF_RenderText_Solid_Wrapped(globalFont, "COMPUTER MAKING MOVE ...", white, boxWidth*2.5);
+    }
+    
+    words = SDL_CreateTextureFromSurface(Window::renderer, surface);
+    SDL_RenderCopy(Window::renderer, words, NULL, &whosTurn);
+    SDL_FreeSurface(surface);
+
+    //FREEING THE MEMORY
 
     TTF_CloseFont( globalFont );
     globalFont = NULL;
@@ -187,11 +213,13 @@ void Board::renderMenu(U64 bbOne, U64 bbTwo)
 
 }
 
-void Board::render(U64 bbOne, U64 bbTwo) 
+void Board::render(Player* playerOne, Player* playerTwo, string currentTurn) 
 {
+    
+    // Render the board, menu and discs
 	renderBoard();
-    renderMenu(bbOne, bbTwo);
-	renderDisks(bbOne, bbTwo);
+    renderMenu(playerOne, playerTwo, currentTurn);
+	renderDisks(playerOne->getBitboard(), playerTwo->getBitboard());
 
 }
 
@@ -202,9 +230,13 @@ void Board::update()
 
 void Board::resize() 
 {
+
+    // resizes the squares based on window width and height
 	boxWidth = Window::windowWidth / BOARD_BOXES_X;
 	boxHeight = Window::windowHeight / BOARD_BOXES_Y;
 
+
+    // Makes sure that the squares will always stay as squares
 	if (boxWidth > boxHeight) {
 
 		boxWidth = boxHeight;
@@ -230,11 +262,13 @@ int Board::getHeight()
 void Board::renderDisks(U64 bbOne, U64 bbTwo) 
 {
 
+    // Iterates across the board to draw the discs
 	for (int i = 0; i < BOARD_BOXES_X-3; i++) 
 		{
 			for (int j = 0; j < BOARD_BOXES_Y; j++) 
 			{
 				int square = i * 8 + j;
+                //Checks if bit in square is black or white
 				if(GET_BIT(bbOne, square))
 				{
 					drawImage("disctextures/blackdisc.png", i+3, j);
@@ -254,6 +288,7 @@ void Board::drawImage(const string& imagePath, int x, int y)
 	SDL_Surface* surface;
 	SDL_Rect rectOne, rectTwo;
 
+    //Gets the image connected to the colour
 	surface = IMG_Load(imagePath.c_str());
 	if(!surface)
 	{
@@ -274,7 +309,7 @@ void Board::drawImage(const string& imagePath, int x, int y)
 	rectTwo.w = boxWidth;
 	rectTwo.h = boxHeight;
 
-
+    //free up resources
 	SDL_RenderCopy(Window::renderer, disc, &rectOne, &rectTwo);
 	SDL_FreeSurface(surface);
     SDL_DestroyTexture(disc);
@@ -315,9 +350,10 @@ U64 Board::generateMoves(U64 bbOwn, U64 bbOpponent)
     U64 flood;
     U64 legalMoves = 0;
 
+    //Iterates for each direction
     for (int i = 0; i < 8; i++)
     {
-
+        //Checks squares across the entire length of board
         flood = shiftOne(bbOwn, i) & bbOpponent;
 
         flood |= shiftOne(flood, i) & bbOpponent;
@@ -334,6 +370,7 @@ U64 Board::generateMoves(U64 bbOwn, U64 bbOpponent)
 
 bool Board::isValid(U64 bbOwn, U64 bbOpponent, int index)
 {
+    // Checks bit if its a legal move
     U64 checkedBit = 1ULL << index;
     return (generateMoves(bbOwn, bbOpponent) & checkedBit) != 0;
 }
@@ -355,6 +392,7 @@ void  Board::commitMove(U64 *bbOwn, U64 *bbOpponent, int index)
 
         for (int i = 0; i < 8; i++)
         {
+            //Utilising Dumb7Fill, the same as generating moves
 
             moves = shiftOne(newDisk, i) & *bbOpponent;
 
@@ -379,6 +417,7 @@ bool Board::handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* playerOne, Pl
     {
         int x, y, boardX, boardY;
 	    SDL_GetMouseState(&x, &y);
+        // Get the mouse coordinates from events handled
 
         boardX = ((x - Game::boardTopLeftX) / boxWidth)-3;
         boardY = (y - Game::boardTopLeftY) / boxHeight;
@@ -387,11 +426,11 @@ bool Board::handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* playerOne, Pl
         if(isValid(playerOne->pieceColour, playerTwo->pieceColour, index) == 1)
         {
             commitMove(&playerOne->pieceColour, &playerTwo->pieceColour, index);
-            return 1;
+            return 1;   //Returns to verify that player made move
         }
         else
         {
-            return 0;
+            return 0;   // Returns that player hasn't made a move yet
         }  
     }
     else
@@ -454,45 +493,48 @@ void Board::printSingleBitboard(U64 bb)
          << "   a b c d e f g h" << endl; // Prints the file
 }
 
-void Board::frontierDisks(U64 bbOwn, U64 bbOpponent,
-                           U64 *myFront, U64 *oppFront)
+int Board::frontierDiscs(U64 bbOwn, U64 bbOpponent)
 {
-        U64 emptyCells = ~(bbOwn | bbOpponent);
-        U64 x;
-        int dir;
+        U64 bbEmpty = ~(bbOwn | bbOpponent);
+        U64 testFront;
+        int value;
 
-        *myFront = 0;
-        *oppFront = 0;
+        U64 ownFront = 0;
+        U64 oppFront = 0;
 
-        for (dir = 0; dir < 8; dir++) {
-                /* Check cells adjacent to empty cells. */
-                x = shiftOne(emptyCells, dir);
-                *myFront |= x & bbOwn;
-                *oppFront |= x & bbOpponent;
+        //Checks whether there are empty discs in all 8 directions
+        for (int i = 0; i < 8; i++) {
+                testFront = shiftOne(bbEmpty, i);
+                ownFront |= testFront & bbOwn;
+                oppFront |= testFront & bbOpponent;
         }
+
+        value = popCount(ownFront) - popCount(oppFront);
+        return value;
 }
 
 int Board::discSquareValue(U64 bbOwn, U64 bbOpponent)
 {
 
     int value;
+    // Check turn number
     int discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
 
     for(int i = 0; i<(sizeof(squareDefinitions)/sizeof(squareDefinitions[0])); i++)
     {
         U64 ownCheckedSquares = bbOwn &  squareDefinitions[i];
         U64 oppCheckedSquares = bbOpponent &  squareDefinitions[i];
-        if(discsPlaced < 25)
+        if(discsPlaced < 25)    //GET VALUES FOR EARLY GAME
         {
             value += popCount(ownCheckedSquares) * squareEarlyValues[i];
             value -= popCount(oppCheckedSquares) * squareEarlyValues[i];
         }
-        else if(discsPlaced < 45 && discsPlaced > 24)
+        else if(discsPlaced < 45 && discsPlaced > 24)   //GET VALUES FOR MID GAME
         {
             value += popCount(ownCheckedSquares) * squareMidValues[i];
             value -= popCount(oppCheckedSquares) * squareMidValues[i];
         }
-        else
+        else    //GET VALUES FOR END GAME
         {
             value += popCount(ownCheckedSquares) * squareEndValues[i];
             value -= popCount(oppCheckedSquares) * squareEndValues[i];
@@ -505,48 +547,44 @@ int Board::discSquareValue(U64 bbOwn, U64 bbOpponent)
 int Board::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
 {
 
-    int ownCount, oppCount, discsPlaced;
-    U64 myFront, oppFront;
+    int discsPlaced;
     int value = 0;
     U64 ownCheckedSquares, oppCheckedSquares;
 
     if (!ownMoves && !oppMoves)
     {
-        /* Terminal state. */
-        ownCount = popCount(bbOwn);
-        oppCount = popCount(bbOpponent);
-        return (ownCount - oppCount) * (1 << 20);
+        //Chooses based on disc difference if no moves found
+        return (popCount(bbOwn) - popCount(bbOpponent));
     }
 
-    frontierDisks(bbOwn, bbOpponent, &myFront, &oppFront);
     discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
     //EVALUATION FOR EARLY GAME
     if(discsPlaced < 25)
     {
-        value += (discSquareValue(bbOwn, bbOpponent) * 20);  //POSITION
+        value += discSquareValue(bbOwn, bbOpponent) * 20;  //POSITION
         value += (popCount(ownMoves) - popCount(oppMoves)) * 80; //MOBILITY
-        value += (popCount(myFront) - popCount(oppFront)) * 40;  //FRONTIER
+        value += frontierDiscs(bbOwn, bbOpponent) * 40;  //FRONTIER
     }
     //EVALUATION FOR MID GAME
     else if(discsPlaced < 45 && discsPlaced > 24)
     {
-        value += (discSquareValue(bbOwn, bbOpponent) * 40);  //POSITION
+        value += discSquareValue(bbOwn, bbOpponent) * 40;  //POSITION
         value += (popCount(ownMoves) - popCount(oppMoves)) * 60; //MOBILITY
-        value += (popCount(myFront) - popCount(oppFront)) * 70;  //FRONTIER
+        value += frontierDiscs(bbOwn, bbOpponent) * 70;  //FRONTIER
     }
     //EVALUATION FOR END GAME
     else
     {
-        value += (discSquareValue(bbOwn, bbOpponent) * 50);  //POSITION
+        value += discSquareValue(bbOwn, bbOpponent) * 50;  //POSITION
         value += (popCount(ownMoves) - popCount(oppMoves)) * 20; //MOBILITY
-        value += (popCount(myFront) - popCount(oppFront)) * 20;  //FRONTIER
+        value += frontierDiscs(bbOwn, bbOpponent) * 20;  //FRONTIER
     }
 
     return value;
 }
 
 int Board::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta,
-               int *bestMove, int *evalCount)
+               int *bestMove, int *evaluationCount)
 {
 
     U64 ownNewDisks, oppNewDisks;
@@ -555,17 +593,19 @@ int Board::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
 
     if (!ownMoves && oppMoves)
     {
+        //Change sides if main player doesn't have moves
         return -searchMove(bbOpponent, bbOwn, maxDepth, -beta, -alpha,
-                           bestMove, evalCount);
+                           bestMove, evaluationCount);
     }
 
-    if (maxDepth == 0 || (!ownMoves && !oppMoves))
+    if (maxDepth == 0 || (!ownMoves && !oppMoves))  //Evaluate position if depth reached or no moves left
     {
-        ++*evalCount;
+        ++*evaluationCount;
         return evaluateMove(bbOwn, bbOpponent, ownMoves, oppMoves);
     }
 
     int best = -INT_MAX;
+    //Checks the board
     for (int i = 0; i < 64; i++)
     {
         if (!(ownMoves & (1ULL << i)))
@@ -575,12 +615,12 @@ int Board::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
 
         ownNewDisks = bbOwn;
         oppNewDisks = bbOpponent;
-        commitMove(&ownNewDisks, &oppNewDisks, i);
+        commitMove(&ownNewDisks, &oppNewDisks, i);  
 
         int a = -searchMove(oppNewDisks, ownNewDisks, maxDepth - 1, -beta, -alpha,
-                            NULL, evalCount);
+                            NULL, evaluationCount);
 
-        if (a > best)
+        if (a > best)   //Alpha beta pruning
         {
             best = a;
             if (bestMove)
@@ -598,16 +638,15 @@ int Board::searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int be
     return best;
 }
 
-int Board::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
-                               int startDepth, int evalBudget)
+int Board::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent, int startDepth, int evaluationBudget)
 {
-    int depth, bestMove, evalCount, s;
+    int depth, bestMove, evaluationCount, s;
 
-    evalCount = 0;
+    evaluationCount = 0;
     bestMove = -1;
-    for (depth = startDepth; evalCount < evalBudget; depth++)
+    for (depth = startDepth; evaluationCount < evaluationBudget; depth++)
     {
-        s = searchMove(bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX, &bestMove, &evalCount);
+        s = searchMove(bbOwn, bbOpponent, depth, -INT_MAX, INT_MAX, &bestMove, &evaluationCount);
         if (s >= (1 << 20) || -s >= (1 << 20))
         {
             break;
@@ -619,24 +658,22 @@ int Board::iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent,
 
 void Board::computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col)
 {
-    int move_idx;
-
+    int moveIndex;
     int startDepth;
 
     if((popCount(bbOwn) + popCount(bbOpponent)) > 45)
     {
-        startDepth = 12;
+        startDepth = 12;    //Search depth for end game
     }
     else
     {
-        startDepth = 8;
+        startDepth = 8; // Search depth before end game
     }
-    static const int evaluationBudget = 500000;
+    static const int evaluationBudget = 500000; //Number of evaluations allowed
 
-    move_idx = iterativeSearchMove(bbOwn, bbOpponent,
-                                   startDepth, evaluationBudget);
+    moveIndex = iterativeSearchMove(bbOwn, bbOpponent, startDepth, evaluationBudget);
 
 
-    *row = move_idx / 8;
-    *col = move_idx % 8;
+    *row = moveIndex / 8;
+    *col = moveIndex % 8;
 }

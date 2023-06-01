@@ -74,9 +74,9 @@ static U64 squareDefinitions[8] =
     0x3C424242423C00ULL   // Outer middle mask
 };
 
-static int squareEarlyValues[8] = {30, -6, -15, -1, 5, 5, -1, -3}; //{30, -12, -15, -1, 0, 0, -1, -3}
-static int squareMidValues[8] = {50, -5, -20, 6, 10, 2, 1, -4};    //{50, -10, -20, 6, 10, 2, 1, -4}
-static int squareEndValues[8] = {100, -12, -25, 5, 10, 5, 2, 1};    //{100, -25, -25, 5, 10, 5, 2, 1}
+static int squareEarlyValues[8] = {50, -10, -20, -1, 5, 5, -1, -3}; //{30, -12, -15, -1, 0, 0, -1, -3}
+static int squareMidValues[8] = {50, -10, -20, 6, 10, 2, 1, -4};    //{50, -10, -20, 6, 10, 2, 1, -4}
+static int squareEndValues[8] = {100, -15, -25, 5, 10, 5, 2, 1};    //{100, -25, -25, 5, 10, 5, 2, 1}
 
 AIOne::AIOne(){};
 
@@ -174,22 +174,23 @@ void AIOne::commitMove(AIOne* aiOne, U64 *bbOwn, U64 *bbOpponent, int index)
     *bbOpponent ^= capturedDisks;
 }
 
-void AIOne::frontierDisks(U64 bbOwn, U64 bbOpponent,
-                           U64 *myFront, U64 *oppFront)
+int AIOne::frontierDiscs(U64 bbOwn, U64 bbOpponent)
 {
-        U64 emptyCells = ~(bbOwn | bbOpponent);
-        U64 x;
-        int dir;
+        U64 bbEmpty = ~(bbOwn | bbOpponent);
+        U64 testFront;
+        int value;
 
-        *myFront = 0;
-        *oppFront = 0;
+        U64 myFront = 0;
+        U64 oppFront = 0;
 
-        for (dir = 0; dir < 8; dir++) {
-                /* Check cells adjacent to empty cells. */
-                x = shiftOne(emptyCells, dir);
-                *myFront |= x & bbOwn;
-                *oppFront |= x & bbOpponent;
+        for (int i = 0; i < 8; i++) {
+                testFront = shiftOne(bbEmpty, i);
+                myFront |= testFront & bbOwn;
+                oppFront |= testFront & bbOpponent;
         }
+
+        value = popCount(oppFront) - popCount(myFront);
+        return value;
 }
 
 int AIOne::discSquareValue(U64 bbOwn, U64 bbOpponent)
@@ -225,45 +226,37 @@ int AIOne::discSquareValue(U64 bbOwn, U64 bbOpponent)
 
 int AIOne::evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves)
 {
-
-    int ownCount, oppCount, discsPlaced;
-    U64 myFront, oppFront;
+    int discsPlaced;
     int value = 0;
     U64 ownCheckedSquares, oppCheckedSquares;
     
     if (!ownMoves && !oppMoves)
     {
-        /* Terminal state. */
-        ownCount = popCount(bbOwn);
-        oppCount = popCount(bbOpponent);
-        return (ownCount - oppCount) * WIN_BONUS;
+        return (popCount(bbOwn) - popCount(bbOpponent));
     }
-    frontierDisks(bbOwn, bbOpponent, &myFront, &oppFront);
     
     discsPlaced = popCount(bbOwn)+popCount(bbOpponent);
     //EVALUATION FOR EARLY GAME
     if(discsPlaced < 25)
     {
-        value += (discSquareValue(bbOwn, bbOpponent) * 20);  //POSITION
+        value += discSquareValue(bbOwn, bbOpponent) * 20;  //POSITION
         value += (popCount(ownMoves) - popCount(oppMoves)) * 80; //MOBILITY
-        value += (popCount(myFront) - popCount(oppFront)) * 40;  //FRONTIER
+        value += frontierDiscs(bbOwn, bbOpponent) * 40;  //FRONTIER
     }
     //EVALUATION FOR MID GAME
     else if(discsPlaced < 45 && discsPlaced > 24)
     {
-        value += (discSquareValue(bbOwn, bbOpponent) * 40);  //POSITION
+        value += discSquareValue(bbOwn, bbOpponent) * 40;  //POSITION
         value += (popCount(ownMoves) - popCount(oppMoves)) * 60; //MOBILITY
-        value += (popCount(myFront) - popCount(oppFront)) * 70;  //FRONTIER
+        value += frontierDiscs(bbOwn, bbOpponent) * 70;  //FRONTIER
     }
     //EVALUATION FOR END GAME
     else
     {
-        value += (discSquareValue(bbOwn, bbOpponent) * 50);  //POSITION
+        value += discSquareValue(bbOwn, bbOpponent) * 50;  //POSITION
         value += (popCount(ownMoves) - popCount(oppMoves)) * 20; //MOBILITY
-        value += (popCount(myFront) - popCount(oppFront)) * 20;  //FRONTIER
+        value += frontierDiscs(bbOwn, bbOpponent) * 20;  //FRONTIER
     }
-    
-    
 
     return value;
 }
@@ -358,7 +351,7 @@ void AIOne::computeMove(AIOne* aiOne, U64 &bbOwn, U64 &bbOpponent, int *row, int
 
     if((popCount(bbOwn) + popCount(bbOpponent)) > 44)
     {
-        startDepth = 12;
+        startDepth = 16;
     }
     else
     {

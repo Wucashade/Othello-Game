@@ -22,7 +22,7 @@ class AIOne
     bool isValid(U64 bbOwn, U64 bbOpponent, int index);
     static void commitMove(AIOne* aiOne, U64 *bbOwn, U64 *bbOpponent, int index);
     static int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves);
-    static void frontierDisks(U64 bbOwn, U64 bbOpponent, U64 *myFront, U64 *oppFront);
+    static int frontierDiscs(U64 bbOwn, U64 bbOpponent);
     static int discSquareValue(U64 bbOwn, U64 bbOpponent);
     static int searchMove(AIOne* aiOne, U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evalCount);
     static int iterativeSearchMove(AIOne* aiOne, U64 &bbOwn, U64 &bbOpponent, int startDepth, int evalBudget);

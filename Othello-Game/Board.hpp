@@ -18,8 +18,8 @@ public:
 
 	void init();
 	void renderBoard();
-	void renderMenu(U64 bbOne, U64 bbTwo);
-	void render(U64 bbOne, U64 bbTwo);
+	void renderMenu(Player* playerOne, Player* playerTwo, string currentTurn);
+	void render(Player* playerOne, Player* playerTwo, string currentTurn);
 	void update();
 	void resize();
 	int getHeight();
@@ -35,11 +35,11 @@ public:
 	bool handleMouseButtonDown(SDL_MouseButtonEvent& b, Player* bbOwn, Player* bbOpponent);
 	void printSingleBitboard(U64 bb);
 	void printBitboard(U64 bbOwn, U64 bbOpponent);
-	void frontierDisks(U64 bbOwn, U64 bbOpponent, U64 *myFront, U64 *oppFront);
+	int frontierDiscs(U64 bbOwn, U64 bbOpponent);
 	int discSquareValue(U64 bbOwn, U64 bbOpponent);
 	int evaluateMove(U64 bbOwn, U64 bbOpponent, U64 ownMoves, U64 oppMoves);
-	int searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evalCount);
-	int iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent, int startDepth, int evalBudget);
+	int searchMove(U64 bbOwn, U64 bbOpponent, int maxDepth, int alpha, int beta, int *bestMove, int *evaluationCount);
+	int iterativeSearchMove(U64 &bbOwn, U64 &bbOpponent, int startDepth, int evaluationBudget);
 	void computeMove(U64 &bbOwn, U64 &bbOpponent, int *row, int *col);
 
 

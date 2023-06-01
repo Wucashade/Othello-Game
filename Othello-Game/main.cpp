@@ -8,7 +8,6 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <ctime>
-// #include "Bitboards.hpp"
 #if defined(_WIN32) and defined(_MSC_VER)
 	#include <crtdbg.h>
 #endif
@@ -19,8 +18,7 @@ int main(int argc, char* argv[])
 {
     
     srand(time(NULL));
-	const int FPS = 60;
-	const int frameDelay = 1000 / FPS;
+	const int frameDelay = 1000 / 60;
 
     Uint32 frameStart = SDL_GetTicks();
 	int frameTime = 0;
@@ -31,13 +29,15 @@ int main(int argc, char* argv[])
 
     while (window->running())
     {
-        deltaTime = SDL_GetTicks() - frameStart;
+        //Optimising to make sure that app doesn't render too often
+        deltaTime = SDL_GetTicks() - frameStart;    
 		frameStart = SDL_GetTicks();
         window->eventManager();
         window->update(float(deltaTime) / 1000.0);
         window->render();
         frameTime = SDL_GetTicks() - frameStart;
 
+        //Adjust to delay
         if (frameDelay > frameTime) {
 			SDL_Delay(frameDelay - frameTime);
 		}
@@ -45,12 +45,6 @@ int main(int argc, char* argv[])
 
     window->clean();
     delete window;
-    
-    
-    
-    
-    // Bitboards* bitboardTest = new Bitboards();
-    // bitboardTest->init();
     
 
 

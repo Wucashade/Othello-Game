@@ -5,7 +5,8 @@
         "iostream": "cpp",
         "iosfwd": "cpp",
         "bitset": "cpp",
-        "string": "cpp"
+        "string": "cpp",
+        "thread": "cpp"
     },
     //"terminal.integrated.fontSize" : 20
 }
